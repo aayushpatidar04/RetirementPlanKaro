@@ -27,7 +27,7 @@
   <td>{{ $c->type==='flat'?'Flat ₹':'%' }}</td>
   <td>{{ $c->type==='flat'?'₹'.number_format($c->value):$c->value.'%' }}</td>
   <td>{{ $c->used_count }}</td>
-  <td>{{ $c->max_uses ?: '∞' }}</td>
+  <td>{{ $c->max_uses ?? '∞' }}</td>
   <td>{{ $c->expires_at ? \Illuminate\Support\Carbon::parse($c->expires_at)->format('d M Y') : '—' }}</td>
   <td><span class="tag {{ $c->active?'ok':'no' }}">{{ $c->active?'Active':'Off' }}</span></td>
   <td class="row">

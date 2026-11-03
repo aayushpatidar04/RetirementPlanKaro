@@ -461,7 +461,7 @@ class PayController extends Controller
     {
         $cfg    = config('rpk.payu');
         $amount = number_format((float) $payment->amount, 2, '.', '');
-        $first  = trim(preg_replace('/[^A-Za-z0-9 ]/', '', (string) $user->name)) ?: 'Customer';
+        $first  = trim(preg_replace('/[^A-Za-z0-9 ]/', '', (string) $user->name)) ?? 'Customer';
         $udf1   = (string) $payment->id;
 
         $fields = [

@@ -44,11 +44,11 @@
                                 </span>
                             </td>
 
-                            <td>{{ $l->mobile ?: '—' }}</td>
+                            <td>{{ $l->mobile ?? '—' }}</td>
 
-                            <td>{{ $l->email ?: '—' }}</td>
+                            <td>{{ $l->email ?? '—' }}</td>
 
-                            <td>{{ $l->ip ?: '—' }}</td>
+                            <td>{{ $l->ip ?? '—' }}</td>
 
                             <td>
                                 {{ \Illuminate\Support\Carbon::parse($l->created_at)->format('d M Y, h:i A') }}

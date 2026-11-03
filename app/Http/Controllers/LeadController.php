@@ -22,7 +22,7 @@ class LeadController extends Controller
 
         $event  = substr((string) ($d['ev'] ?? $d['type'] ?? 'lead'), 0, 60);
         $mobile = isset($d['mobile']) ? substr(preg_replace('/\D/', '', (string) $d['mobile']), -10) : null;
-        $mobile = $mobile ?: null;
+        $mobile = $mobile ?? null;
         $email  = isset($d['email']) ? substr((string) $d['email'], 0, 190) : null;
 
         // "signup" fires on every login in the page: keep one row per person

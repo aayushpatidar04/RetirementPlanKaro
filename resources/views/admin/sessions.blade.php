@@ -12,7 +12,7 @@
   <td>{{ $s->slot }}</td>
   <td>{{ $s->mode }}</td>
   <td>{{ $s->mobile }}</td>
-  <td style="white-space:normal;max-width:220px">{{ $s->note ?: '—' }}</td>
+  <td style="white-space:normal;max-width:220px">{{ $s->note ?? '—' }}</td>
   <td><span class="tag {{ $s->status==='confirmed'?'pd':($s->status==='done'?'ok':($s->status==='cancelled'?'no':'mu')) }}">{{ $s->status }}</span></td>
   <td class="row">
     @if($s->status==='confirmed')

@@ -19,9 +19,9 @@
   <td>{{ $p->name }}<br><small style="color:var(--mu)">{{ $p->mobile }}</small></td>
   <td>{{ ucfirst($p->purpose) }}</td>
   <td>₹{{ number_format($p->amount,2) }}</td>
-  <td>{{ $p->coupon_code ?: '—' }}</td>
+  <td>{{ $p->coupon_code ?? '—' }}</td>
   <td><span class="tag {{ $p->status==='success'?'ok':($p->status==='pending'?'pd':'no') }}">{{ $p->status }}</span></td>
-  <td>{{ $p->payu_id ?: '—' }}</td>
+  <td>{{ $p->payu_id ?? '—' }}</td>
   <td>{{ \Illuminate\Support\Carbon::parse($p->created_at)->format('d M, h:i A') }}</td>
 </tr>
 @endforeach

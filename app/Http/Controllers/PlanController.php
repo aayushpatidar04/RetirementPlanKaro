@@ -91,13 +91,13 @@ class PlanController extends Controller
             $this->replaceRows('assets', $uid, array_map(fn ($a) => [
                 'type'   => $a['type'],
                 'slot'   => $a['slot'] ?? null,
-                'label'  => trim((string) ($a['label'] ?? '')) ?: 'Other',
+                'label'  => trim((string) ($a['label'] ?? '')) ?? 'Other',
                 'amount' => (float) ($a['amount'] ?? 0),
             ], array_values($d['assets'])));
 
             $this->replaceRows('liabilities', $uid, array_map(fn ($l) => [
                 'slot'   => $l['slot'] ?? null,
-                'label'  => trim((string) ($l['label'] ?? '')) ?: 'Other',
+                'label'  => trim((string) ($l['label'] ?? '')) ?? 'Other',
                 'amount' => (float) ($l['amount'] ?? 0),
             ], array_values($d['liabilities'])));
         });
@@ -138,7 +138,7 @@ class PlanController extends Controller
 
             $this->replaceRows('expenses', $uid, array_map(fn ($x) => [
                 'slot'         => $x['slot'] ?? null,
-                'label'        => trim((string) ($x['label'] ?? '')) ?: 'Other',
+                'label'        => trim((string) ($x['label'] ?? '')) ?? 'Other',
                 'amount'       => (float) ($x['amount'] ?? 0),
                 'is_essential' => (bool) ($x['essential'] ?? false),
             ], array_values($d['expenses'])));
@@ -269,12 +269,12 @@ class PlanController extends Controller
                 $this->replaceRows('assets', $uid, array_map(fn ($a) => [
                     'type'   => $a['type'],
                     'slot'   => $a['slot'] ?? null,
-                    'label'  => trim((string) ($a['label'] ?? '')) ?: 'Other',
+                    'label'  => trim((string) ($a['label'] ?? '')) ?? 'Other',
                     'amount' => (float) ($a['amount'] ?? 0),
                 ], array_values($nw['assets'] ?? [])));
                 $this->replaceRows('liabilities', $uid, array_map(fn ($l) => [
                     'slot'   => $l['slot'] ?? null,
-                    'label'  => trim((string) ($l['label'] ?? '')) ?: 'Other',
+                    'label'  => trim((string) ($l['label'] ?? '')) ?? 'Other',
                     'amount' => (float) ($l['amount'] ?? 0),
                 ], array_values($nw['liabilities'] ?? [])));
             }
@@ -287,7 +287,7 @@ class PlanController extends Controller
                 ]);
                 $this->replaceRows('expenses', $uid, array_map(fn ($x) => [
                     'slot'         => $x['slot'] ?? null,
-                    'label'        => trim((string) ($x['label'] ?? '')) ?: 'Other',
+                    'label'        => trim((string) ($x['label'] ?? '')) ?? 'Other',
                     'amount'       => (float) ($x['amount'] ?? 0),
                     'is_essential' => (bool) ($x['essential'] ?? false),
                 ], array_values($ie['expenses'] ?? [])));

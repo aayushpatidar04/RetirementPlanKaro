@@ -50,7 +50,7 @@ class WithdrawalController extends Controller
 
             $rows = array_map(fn ($g) => [
                 'user_id'    => $uid,
-                'name'       => trim((string) ($g['name'] ?? '')) ?: 'Other goal',
+                'name'       => trim((string) ($g['name'] ?? '')) ?? 'Other goal',
                 'target_age' => (float) ($g['age'] ?? 0),
                 'cost_today' => (float) ($g['amt'] ?? 0),
                 'created_at' => $now,

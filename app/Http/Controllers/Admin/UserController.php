@@ -27,6 +27,17 @@ class UserController extends Controller
             ->paginate(30)
             ->withQueryString();
 
-        return view('admin.users', compact('users', 'q'));
+        return view('admin.users.index', compact('users', 'q'));
+    }
+
+    public function show(int $id): View
+    {
+        $user = DB::table('users')->find($id);
+        $payments = DB::table('payments')->where('user_id', $id)->orderByDesc('id')->get();
+        $sessions = DB::table('guidance_sessions')->where('user_id', $id)->orderByDesc('id')->get();
+        $leads = DB::table('leads')->where('user_id', $id)->orderByDesc('id')->get();
+        $blobs = DB::table('user_blobs')->where('user_id', $id)->get();
+
+        return view('admin.users.show', compact('user', 'payments', 'sessions', 'leads', 'blobs'));
     }
 }

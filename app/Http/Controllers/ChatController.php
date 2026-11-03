@@ -52,6 +52,6 @@ class ChatController extends Controller
 
         $reply = trim(collect($r->json('content', []))->pluck('text')->implode(''));
 
-        return response()->json(['reply' => $reply ?: null]);
+        return response()->json(['reply' => $reply ?? null]);
     }
 }

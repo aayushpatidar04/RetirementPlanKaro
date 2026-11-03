@@ -20,8 +20,8 @@ class RegisterRequest extends FormRequest
             'mobile'  => preg_replace('/\D/', '', (string) $this->input('mobile')),
             'email'   => strtolower(trim((string) $this->input('email'))),
             'city'    => trim((string) $this->input('city')),
-            'pan'     => strtoupper(trim((string) $this->input('pan'))) ?: null,
-            'ref'     => strtoupper(trim((string) $this->input('ref'))) ?: null,
+            'pan'     => strtoupper(trim((string) $this->input('pan'))) ?? null,
+            'ref'     => strtoupper(trim((string) $this->input('ref'))) ?? null,
         ]);
     }
 

@@ -14,7 +14,7 @@
   <td>{{ $u->city }}</td>
   <td>@if($u->email_verified_at)<span class="tag ok">Yes</span>@else<span class="tag no">No</span>@endif</td>
   <td>{{ $u->referral_code }}</td>
-  <td>{{ $u->referred_by_code ?: '—' }}</td>
+  <td>{{ $u->referred_by_code ?? '—' }}</td>
   <td>{{ \Illuminate\Support\Carbon::parse($u->created_at)->format('d M Y') }}</td>
 </tr>
 @endforeach
