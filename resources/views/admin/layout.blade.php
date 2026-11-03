@@ -170,7 +170,7 @@
 
     nav.side a {
       display: block;
-      padding: 8px 10px;
+      padding: 8px 0px;
       border-radius: 8px;
       color: var(--mut);
       cursor: pointer;
@@ -184,6 +184,12 @@
     }
 
     nav.side a.on {
+      background: var(--pri-s);
+      color: var(--pri);
+      font-weight: 700
+    }
+    nav.side summary.on {
+      border-radius: 8px;
       background: var(--pri-s);
       color: var(--pri);
       font-weight: 700
@@ -445,22 +451,21 @@
     </div>
     <hr style="height: 2px; width: 100%; border: 0; border-top: 2px solid #000; margin: 10px 0;">
     <a href="{{ route('admin.dashboard') }}"
-      class="top {{ request()->routeIs('admin.dashboard') ? 'on' : '' }}">Dashboard</a>
+      class="top {{ request()->routeIs('admin.dashboard') ? 'on' : '' }}" style="padding: 8px 10px;">Dashboard</a>
 
     <details class="nav-group" {{ 
         request()->routeIs([
+            'admin.clients',
             'admin.users',
             'admin.leads',
             'admin.payments',
         ])
         ? 'open'
         : ''}}>
-      <summary class="ngh">Clients <span class="chev">▾</span></summary>
-      <a href="{{ route('admin.users') }}" class="nsub {{ request()->routeIs('admin.users') ? 'on' : '' }}">Client
-        Records</a>
+      <summary class="ngh {{ request()->routeIs('admin.clients') ? 'on' : '' }}"><a href="{{ route('admin.clients') }}" style="color:inherit;text-decoration:none; font-weight: bold;">Clients</a> <span class="chev">▾</span></summary>
+      <a href="{{ route('admin.users') }}" class="nsub {{ request()->routeIs('admin.users') ? 'on' : '' }}">Client Records</a>
       <a href="{{ route('admin.leads') }}" class="nsub {{ request()->routeIs('admin.leads') ? 'on' : '' }}">Prospects</a>
-      <a href="{{ route('admin.payments') }}"
-        class="nsub {{ request()->routeIs('admin.payments') ? 'on' : '' }}">Transactions</a>
+      <a href="{{ route('admin.payments') }}" class="nsub {{ request()->routeIs('admin.payments') ? 'on' : '' }}">Transactions</a>
     </details>
 
     <details class="nav-group" {{

@@ -106,6 +106,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
     Route::middleware('admin.auth')->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+        Route::get('clients', [App\Http\Controllers\Admin\ClientController::class, 'index'])->name('clients');
         Route::get('users', [AdminUserController::class, 'index'])->name('users');
         Route::get('leads', [AdminLeadController::class, 'index'])->name('leads');
         Route::get('payments', [AdminPaymentController::class, 'index'])->name('payments');
