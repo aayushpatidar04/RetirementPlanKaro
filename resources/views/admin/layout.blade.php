@@ -155,6 +155,7 @@
       cursor: pointer;
       padding: 8px 10px;
     }
+
     nav.side .ngh:hover {
       background: var(--bg)
     }
@@ -188,6 +189,7 @@
       color: var(--pri);
       font-weight: 700
     }
+
     nav.side summary.on {
       border-radius: 8px;
       background: var(--pri-s);
@@ -447,78 +449,84 @@
         <h1>Retirement Plan Karo</h1>
         <small>Admin Portal</small>
       </div>
-      <button class="theme-btn" onclick="toggleTheme()" title="Toggle theme">🌓</button>
     </div>
     <hr style="height: 2px; width: 100%; border: 0; border-top: 2px solid #000; margin: 10px 0;">
-    <a href="{{ route('admin.dashboard') }}"
-      class="top {{ request()->routeIs('admin.dashboard') ? 'on' : '' }}" style="padding: 8px 10px;">Dashboard</a>
+    <a href="{{ route('admin.dashboard') }}" class="top {{ request()->routeIs('admin.dashboard') ? 'on' : '' }}"
+      style="padding: 8px 10px;">Dashboard</a>
 
     <details class="nav-group" {{ 
         request()->routeIs([
-            'admin.clients',
-            'admin.users',
-            'admin.leads',
-            'admin.payments',
-        ])
-        ? 'open'
-        : ''}}>
-      <summary class="ngh {{ request()->routeIs('admin.clients') ? 'on' : '' }}"><a href="{{ route('admin.clients') }}" style="color:inherit;text-decoration:none; font-weight: bold;">Clients</a> <span class="chev">▾</span></summary>
-      <a href="{{ route('admin.users') }}" class="nsub {{ request()->routeIs('admin.users') ? 'on' : '' }}">Client Records</a>
-      <a href="{{ route('admin.leads') }}" class="nsub {{ request()->routeIs('admin.leads') ? 'on' : '' }}">Prospects</a>
-      <a href="{{ route('admin.payments') }}" class="nsub {{ request()->routeIs('admin.payments') ? 'on' : '' }}">Transactions</a>
+    'admin.clients',
+    'admin.users',
+    'admin.leads',
+    'admin.payments',
+  ])
+  ? 'open'
+  : ''}}>
+      <summary class="ngh {{ request()->routeIs('admin.clients') ? 'on' : '' }}"><a href="{{ route('admin.clients') }}"
+          style="color:inherit;text-decoration:none; font-weight: bold;">Clients</a> <span class="chev">▾</span>
+      </summary>
+      <a href="{{ route('admin.users') }}" class="nsub {{ request()->routeIs('admin.users') ? 'on' : '' }}">Client
+        Records</a>
+      <a href="{{ route('admin.leads') }}"
+        class="nsub {{ request()->routeIs('admin.leads') ? 'on' : '' }}">Prospects</a>
+      <a href="{{ route('admin.payments') }}"
+        class="nsub {{ request()->routeIs('admin.payments') ? 'on' : '' }}">Transactions</a>
     </details>
 
     <details class="nav-group" {{
-        request()->routeIs([
-            'admin.sessions',
-            'admin.quotes',
-            'admin.referrals',
-            'admin.messages',
-        ])
-        ? 'open'
-        : ''
+  request()->routeIs([
+    'admin.sessions',
+    'admin.quotes',
+    'admin.referrals',
+    'admin.messages',
+  ])
+  ? 'open'
+  : ''
     }}>
       <summary class="ngh">Business Development <span class="chev">▾</span></summary>
       <a href="#" class="nsub">Get Quotes</a>
-      <a href="{{ route('admin.sessions') }}" class="nsub {{ request()->routeIs('admin.sessions') ? 'on' : '' }}">Advisory
+      <a href="{{ route('admin.sessions') }}"
+        class="nsub {{ request()->routeIs('admin.sessions') ? 'on' : '' }}">Advisory
         sessions</a>
       <a href="#" class="nsub">Referrals</a>
       <a href="#" class="nsub">Messages & Email</a>
     </details>
 
     <details class="nav-group" {{
-        request()->routeIs([
-            'admin.coupons',
-            'admin.settings',
-        ])
-        ? 'open'
-        : ''
+  request()->routeIs([
+    'admin.coupons',
+    'admin.settings',
+  ])
+  ? 'open'
+  : ''
     }}>
       <summary class="ngh">Pricing & Incentives <span class="chev">▾</span></summary>
       <a href="{{ route('admin.coupons') }}" class="nsub {{ request()->routeIs('admin.coupons') ? 'on' : '' }}">Discount
         codes</a>
-      <a href="{{ route('admin.settings') }}" class="nsub {{ request()->routeIs('admin.settings') ? 'on' : '' }}">Pricing &
+      <a href="{{ route('admin.settings') }}"
+        class="nsub {{ request()->routeIs('admin.settings') ? 'on' : '' }}">Pricing &
         rewards</a>
       <a href="#" class="nsub">One Window Investing</a>
     </details>
 
     <details class="nav-group" {{ 
         request()->routeIs([
-            'admin.testimonials',
-        ])
-        ? 'open'
-        : ''}}>
+    'admin.testimonials',
+  ])
+  ? 'open'
+  : ''}}>
       <summary class="ngh">Website Content <span class="chev">▾</span></summary>
       <a href="#" class="nsub">Testimonials</a>
     </details>
 
     <details class="nav-group" {{ 
         request()->routeIs([
-            'admin.versions',
-            'admin.audit',
-        ])
-        ? 'open'
-        : ''}}>
+    'admin.versions',
+    'admin.audit',
+  ])
+  ? 'open'
+  : ''}}>
       <summary class="ngh">Administration <span class="chev">▾</span></summary>
       <a href="#" class="nsub">Website versions</a>
       <a href="#" class="nsub">Audit log</a>
@@ -526,23 +534,25 @@
 
     <details class="nav-group" {{ 
         request()->routeIs([
-            'admin.team',
-            'admin.roles',
-        ])
-        ? 'open'
-        : ''}}>
+    'admin.team',
+    'admin.roles',
+  ])
+  ? 'open'
+  : ''}}>
       <summary class="ngh">Access Control <span class="chev">▾</span></summary>
       <a href="#" class="nsub">Team Members</a>
       <a href="#" class="nsub">Roles & Permissions</a>
     </details>
 
+
     <form method="POST" action="{{ route('admin.logout') }}" class="logout"
       style="margin-top:auto;padding-top:16px;border-top:1px solid var(--line)">
       @csrf
       <button type="submit"
-        style="width:100%;background:none;border:1px solid var(--line);padding:9px;border-radius:10px;color:var(--mut);font-weight:600;cursor:pointer;font-size:13px;font-family:inherit">Log
-        out</button>
+      style="width:100%;background:none;border:1px solid var(--line);padding:9px;border-radius:10px;color:var(--mut);font-weight:600;cursor:pointer;font-size:13px;font-family:inherit">Log
+      out</button>
     </form>
+    <button type="button" class="theme-btn" onclick="toggleTheme()" title="Toggle theme">🌓</button>
   </nav>
   <main>
     @if(session('ok'))
