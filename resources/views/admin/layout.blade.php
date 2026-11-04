@@ -485,7 +485,7 @@
   : ''
     }}>
       <summary class="ngh">Business Development <span class="chev">▾</span></summary>
-      <a href="#" class="nsub">Get Quotes</a>
+      <a href="#" class="nsub">Quote Requests</a>
       <a href="{{ route('admin.sessions') }}"
         class="nsub {{ request()->routeIs('admin.sessions') ? 'on' : '' }}">Advisory
         sessions</a>

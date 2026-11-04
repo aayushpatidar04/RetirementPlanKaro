@@ -1,6 +1,5 @@
-@extends('admin.layout')
-
-@section('title', 'Prospects')
+@extends("admin.layout")
+@section("title", "Prospects")
 
 @push('styles')
   <style>
@@ -189,6 +188,24 @@
   </style>
 @endpush
 
+@push('scripts')
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script>
+    function exportLeads() {
+      const rows = [];
+      document.querySelectorAll('#leads-table tbody tr').forEach(tr => {
+        const tds = tr.querySelectorAll('td');
+        if (tds.length === 0) return;
+        rows.push([tds[0].innerText, tds[1].innerText, tds[2].innerText, tds[3].innerText, tds[4].innerText, tds[5].innerText]);
+      });
+      const ws = XLSX.utils.aoa_to_sheet([['Event', 'Mobile', 'Email', 'IP', 'User ID', 'When'], ...rows]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Prospects');
+      XLSX.writeFile(wb, 'Prospects.xlsx');
+    }
+  </script>
+@endpush
+
 @section('content')
   <div class="hh">
     <div>
@@ -204,6 +221,7 @@
       </div>
 
       <button class="btn p">Message all</button>
+      <button class="btn" onclick="exportLeads()">Export Excel</button>
     </div>
   </div>
 
@@ -212,7 +230,7 @@
       @if($leads->isEmpty())
         <div class="em">No prospects found.</div>
       @else
-        <table>
+        <table id="leads-table">
           <thead>
             <tr>
               <th>Event</th>
