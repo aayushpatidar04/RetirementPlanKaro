@@ -464,7 +464,8 @@
   ? 'open'
   : ''}}>
       <summary class="ngh {{ request()->routeIs('admin.clients') ? 'on' : '' }}"><a href="{{ route('admin.clients') }}"
-          style="color:inherit;text-decoration:none; font-weight: bold;">Clients</a> <span class="chev">▾</span>
+          style="color:inherit;text-decoration:none; font-weight: bold; padding: 0px;">Clients</a> <span
+          class="chev">▾</span>
       </summary>
       <a href="{{ route('admin.users') }}" class="nsub {{ request()->routeIs('admin.users') ? 'on' : '' }}">Client
         Records</a>
@@ -495,8 +496,7 @@
 
     <details class="nav-group" {{
   request()->routeIs([
-    'admin.coupons',
-    'admin.settings',
+    'admin.coupons'
   ])
   ? 'open'
   : ''
@@ -504,9 +504,6 @@
       <summary class="ngh">Pricing & Incentives <span class="chev">▾</span></summary>
       <a href="{{ route('admin.coupons') }}" class="nsub {{ request()->routeIs('admin.coupons') ? 'on' : '' }}">Discount
         codes</a>
-      <a href="{{ route('admin.settings') }}"
-        class="nsub {{ request()->routeIs('admin.settings') ? 'on' : '' }}">Pricing &
-        rewards</a>
       <a href="#" class="nsub">One Window Investing</a>
     </details>
 
@@ -544,13 +541,16 @@
       <a href="#" class="nsub">Roles & Permissions</a>
     </details>
 
+    <a href="{{ route('admin.settings') }}" class="top {{ request()->routeIs('admin.settings') ? 'on' : '' }}"
+      style="padding: 8px 10px;">Settings</a>
+
 
     <form method="POST" action="{{ route('admin.logout') }}" class="logout"
       style="margin-top:auto;padding-top:16px;border-top:1px solid var(--line)">
       @csrf
       <button type="submit"
-      style="width:100%;background:none;border:1px solid var(--line);padding:9px;border-radius:10px;color:var(--mut);font-weight:600;cursor:pointer;font-size:13px;font-family:inherit">Log
-      out</button>
+        style="width:100%;background:none;border:1px solid var(--line);padding:9px;border-radius:10px;color:var(--mut);font-weight:600;cursor:pointer;font-size:13px;font-family:inherit">Log
+        out</button>
     </form>
     <button type="button" class="theme-btn" onclick="toggleTheme()" title="Toggle theme">🌓</button>
   </nav>
