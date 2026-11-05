@@ -48,21 +48,23 @@ class UserController extends Controller
 
 
 
-    public function storeNote(Request $request, int $id): RedirectResponse
+    public function updateTags(Request $request, int $id): RedirectResponse
     {
         $data = $request->validate([
-            'note' => 'required|string|max:2000',
-            'author' => 'nullable|string|max:100',
+            'tags' => 'nullable|string|max:500',
+            'assigned_to' => 'nullable|string|max:100',
+            'stage' => 'nullable|string|max:50',
         ]);
-        DB::table('client_notes')->insert([
-            'user_id' => $id,
-            'author' => $data['author'] ?? 'Owner',
-            'note' => $data['note'],
-            'created_at' => now(),
+        $tags = collect(explode(',', (string)($data['tags'] ?? '')))->map(fn($t)=>trim($t))->filter()->values()->all();
+        DB::table('users')->where('id', $id)->update([
+            'tags' => json_encode($tags),
+            'assigned_to' => $data['assigned_to'] ?? null,
+            'stage' => $data['stage'] ?? null,
             'updated_at' => now(),
         ]);
-        return redirect()->route('admin.users.show', $id)->with('ok', 'Note added.');
+        return redirect()->route('admin.users.show', $id)->with('ok', 'Tags updated.');
     }
+
 
 
 }

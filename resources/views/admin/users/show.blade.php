@@ -353,7 +353,7 @@
           <button type="button" class="mi" onclick="document.getElementById('editClient').showModal(); this.closest('details').open=false;">Edit client profile</button>
           <button type="button" class="mi" onclick="document.getElementById('adjustPoints').showModal(); this.closest('details').open=false;">Adjust points / wallet</button>
           <button type="button" class="mi" onclick="document.getElementById('addNote').showModal(); this.closest('details').open=false;">Add note</button>
-          <button class="mi">Edit tags</button>
+          <button type="button" class="mi" onclick="document.getElementById('editTags').showModal(); this.closest('details').open=false;">Edit tags</button>
           <button class="mi">Export client report</button>
           <button class="mi d">{{ !empty($user->status) && $user->status==='Blocked' ? 'Reinstate account' : 'Suspend account' }}</button>
         </div>
@@ -399,7 +399,7 @@
   </dialog>
 
   <dialog id="addNote" style="border:0;padding:0;background:transparent">
-    <form method="POST" action="{{ route('admin.users.notes.store', $user->id) }}" class="mo" style="min-width:360px; background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;display:block">
+    <form method="POST" action="{{ route('admin.users.notes.store', $user->id) }}" class="mo" style="width:min(560px,100%);background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;display:block">
       @csrf
       <h3 style="margin:0 0 12px">Add note</h3>
       <div class="fg" style="display:grid;grid-template-columns:1fr;gap:10px">
@@ -407,6 +407,27 @@
       </div>
       <div class="ac" style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
         <button type="button" class="btn" onclick="document.getElementById('addNote').close()">Cancel</button>
+        <button type="submit" class="btn p">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="editTags" style="border:0;padding:0;background:transparent">
+    <form method="POST" action="{{ route('admin.users.tags.update', $user->id) }}" class="mo" style="width:min(560px,100%);background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;display:block">
+      @csrf
+      @method('PUT')
+      <h3 style="margin:0 0 12px">Edit tags</h3>
+      @php $tagsVal = ''; if(isset($user->tags)){ $tagsVal = is_string($user->tags)? implode(', ', json_decode($user->tags, true)?:[]) : (is_array($user->tags)? implode(', ',$user->tags):$user->tags); } @endphp
+      <div class="fg" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <label class="w" style="grid-column:1/-1">Tags (comma separated)<input name="tags" value="{{ $tagsVal }}"></label>
+        <label>Assigned to<input name="assigned_to" value="{{ $user->assigned_to ?? ($user->owner ?? '') }}"></label>
+        <label>Stage<select name="stage">
+          @php $st = $user->stage ?? ''; $opts=['','Signed up','Payment failed','Paid report','Session booked','Hot lead','Lost']; @endphp
+          @foreach($opts as $o)<option value="{{ $o }}" {{ $st===$o?'selected':'' }}>{{ $o?:'—' }}</option>@endforeach
+        </select></label>
+      </div>
+      <div class="ac" style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+        <button type="button" class="btn" onclick="document.getElementById('editTags').close()">Cancel</button>
         <button type="submit" class="btn p">Save</button>
       </div>
     </form>
@@ -551,16 +572,13 @@
         <div>
           <dt>Tags</dt>
           <dd>
-            @if(isset($user->tags))
-              {{ is_array($user->tags) ? implode(', ', $user->tags) : $user->tags }}
-            @else
-              —
-            @endif
+            @php $tv=[]; if(isset($user->tags) && $user->tags){ $tv = is_string($user->tags)?(json_decode($user->tags,true)?:[]):(is_array($user->tags)?$user->tags:[]); } @endphp
+            {{ $tv ? implode(', ', $tv) : '—' }}
           </dd>
         </div>
         <div>
           <dt>Assigned to</dt>
-          <dd>{{ $user->assigned_to ?? ($user->owner ?? 'Unassigned') }}</dd>
+          <dd>{{ $user->assigned_to ?? 'Unassigned' }}</dd>
         </div>
       </div>
     </div>
