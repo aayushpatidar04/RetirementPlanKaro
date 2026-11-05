@@ -1013,28 +1013,85 @@
           <table>
             <thead>
               <tr>
-                <th>TxnID</th>
+                <th>Txn ID</th>
                 <th>Purpose</th>
                 <th>Amount</th>
+                <th>Coupon</th>
                 <th>Status</th>
                 <th>PayU ID</th>
-                <th>Mode</th>
-                <th>Paid at</th>
-                <th>Created</th>
+                <th>Method</th>
+                <th>When</th>
+                <th>Failure reason</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
               @foreach($payments as $p)
+                @php $st = $p->status; $ok = $st === 'success'; $bad = $st === 'failed'; @endphp
                 <tr>
                   <td>{{ $p->txnid }}</td>
                   <td>{{ $p->purpose }}</td>
-                  <td>₹{{ number_format($p->amount, 2) }}</td>
-                  <td>@if($p->status === 'success')<span class="pill ok">success</span>@elseif($p->status === 'failed')<span
-                  class="pill bad">failed</span>@else<span class="pill warn">{{ $p->status }}</span>@endif</td>
-                  <td>{{ $p->payu_id ?? '—' }}</td>
-                  <td>{{ $p->mode ?? '—' }}</td>
-                  <td>{{ $p->paid_at ? \Illuminate\Support\Carbon::parse($p->paid_at)->format('d M Y H:i') : '—' }}</td>
-                  <td>{{ \Illuminate\Support\Carbon::parse($p->created_at)->format('d M Y H:i') }}</td>
+                  <td>₹{{ number_format((float)$p->amount, 2) }}</td>
+                  <td>{{ $p->coupon_code ?: '—' }}</td>
+                  <td>@if($ok)<span class="pill ok">success</span>@elseif($bad)<span class="pill bad">failed</span>@elseif($st==='refunded')<span class="pill warn">refunded</span>@else<span class="pill warn">{{ $st }}</span>@endif</td>
+                  <td>{{ $p->payu_id ?: '—' }}</td>
+                  <td>{{ $p->mode ?: '—' }}</td>
+                  <td>{{ $p->paid_at ? \Illuminate\Support\Carbon::parse($p->paid_at)->format('d M Y, H:i') : \Illuminate\Support\Carbon::parse($p->created_at)->format('d M Y, H:i') }}</td>
+                  <td>—</td>
+                  <td>
+                    @if($ok)
+                      <form method="POST" action="{{ route('admin.users.payments.status', [$user->id, $p->id]) }}" style="display:inline" onsubmit="return confirm('Record this payment as refunded?')">@csrf<input type="hidden" name="status" value="refunded"><button class="btn s" type="submit">Record refund</button></form>
+                    @elseif($bad)
+                      <form method="POST" action="{{ route('admin.users.payments.status', [$user->id, $p->id]) }}" style="display:inline">@csrf<input type="hidden" name="status" value="success"><button class="btn s" type="submit">Mark as received</button></form>
+                    @endif
+                  </td>
+                </tr>
+              @endforeach
+            </tbody>
+          </table>
+        @endif
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Premium reports</h3>
+      <div class="sc">
+        @if(!isset($premiumReports) || $premiumReports->isEmpty())
+          <div class="em">No report purchased.</div>
+        @else
+          <table>
+            <thead><tr><th>Report</th><th>Generated</th><th>Status</th><th>Downloads</th><th>Last download</th></tr></thead>
+            <tbody>
+              @foreach($premiumReports as $r)
+                @php $rst = $r->status; $rok = $rst === 'success'; @endphp
+                <tr>
+                  <td>Premium Retirement Report</td>
+                  <td>{{ $r->paid_at ? \Illuminate\Support\Carbon::parse($r->paid_at)->format('d M Y') : \Illuminate\Support\Carbon::parse($r->created_at)->format('d M Y') }}</td>
+                  <td>@if($rok)<span class="pill ok">success</span>@elseif($rst==='failed')<span class="pill bad">failed</span>@elseif($rst==='refunded')<span class="pill warn">refunded</span>@else<span class="pill warn">{{ $rst }}</span>@endif</td>
+                  <td>{{ $rok ? '—' : '0' }}</td>
+                  <td>—</td>
+                </tr>
+              @endforeach
+            </tbody>
+          </table>
+        @endif
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Coupons used</h3>
+      <div class="sc">
+        @if(!isset($couponRedemptions) || $couponRedemptions->isEmpty())
+          <div class="em">No coupon used.</div>
+        @else
+          <table>
+            <thead><tr><th>Code</th><th>Order</th><th>Discount</th></tr></thead>
+            <tbody>
+              @foreach($couponRedemptions as $c)
+                <tr>
+                  <td>{{ $c->code ?: '—' }}</td>
+                  <td>{{ $c->txnid ?: '—' }}</td>
+                  <td>₹{{ number_format((float)($c->coupon_off ?? 0), 2) }}</td>
                 </tr>
               @endforeach
             </tbody>
@@ -1043,7 +1100,6 @@
       </div>
     </div>
   </div>
-
   <div id="tab-sessions" style="display:none">
     <div class="card">
       <h3>Sessions</h3>

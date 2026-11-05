@@ -57,11 +57,19 @@ class UserController extends Controller
         $toolUsages = DB::table('tool_usages')->where('user_id', $id)->orderByDesc('used_at')->orderByDesc('id')->get();
         $portfolioBlob = DB::table('user_blobs')->where('user_id', $id)->where('kind', 'portfolio')->value('data');
         $portfolio = $portfolioBlob ? json_decode($portfolioBlob, true) : null;
+        $premiumReports = DB::table('payments')->where('user_id', $id)->where('purpose', 'report')->orderByDesc('id')->get();
+        $couponRedemptions = DB::table('coupon_redemptions')
+            ->leftJoin('coupons', 'coupons.id', '=', 'coupon_redemptions.coupon_id')
+            ->leftJoin('payments', 'payments.id', '=', 'coupon_redemptions.payment_id')
+            ->where('coupon_redemptions.user_id', $id)
+            ->orderByDesc('coupon_redemptions.id')
+            ->select('coupons.code', 'payments.txnid', 'payments.coupon_off', 'payments.amount', 'coupon_redemptions.created_at')
+            ->get();
 
         return view('admin.users.show', compact(
             'user','payments','sessions','leads','blobs','reportPts','walletPts','ledger','notes',
             'netWorth','assets','liabilities','incomeExpense','expenses','protection','retirement','goals','family','swp',
-            'toolUsages','portfolio'
+            'toolUsages','portfolio','premiumReports','couponRedemptions'
         ));
     }
 
@@ -186,6 +194,16 @@ class UserController extends Controller
         $user->suspended_at = $suspended ? null : now();
         $user->save();
         return redirect()->route('admin.users.show', $id)->with('ok', $suspended ? 'Account reinstated.' : 'Account suspended.');
+    }
+
+    public function updatePaymentStatus(Request $request, int $id, int $paymentId)
+    {
+        $data = $request->validate(['status' => 'required|in:success,failed,pending,refunded']);
+        $upd = ['status' => $data['status'], 'updated_at' => now()];
+        if ($data['status'] === 'success') $upd['paid_at'] = now();
+        DB::table('payments')->where('id', $paymentId)->where('user_id', $id)->update($upd);
+        $labels = ['success' => 'Marked as received.', 'refunded' => 'Recorded as refunded.', 'failed' => 'Marked as failed.', 'pending' => 'Marked as pending.'];
+        return redirect()->route('admin.users.show', $id)->with('ok', $labels[$data['status']] ?? 'Payment updated.');
     }
 }
 
