@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Models\User;
 use App\Http\Controllers\Controller;
+use App\Support\Settings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -65,11 +66,20 @@ class UserController extends Controller
             ->orderByDesc('coupon_redemptions.id')
             ->select('coupons.code', 'payments.txnid', 'payments.coupon_off', 'payments.amount', 'coupon_redemptions.created_at')
             ->get();
+        $referralsMade = DB::table('referrals')
+            ->join('users as ru', 'ru.id', '=', 'referrals.referred_user_id')
+            ->where('referrals.referrer_user_id', $id)
+            ->orderByDesc('referrals.id')
+            ->select('referrals.credited', 'referrals.created_at as ref_at', 'ru.name', 'ru.surname', 'ru.mobile', 'ru.email', 'ru.created_at as signup_at', 'ru.email_verified_at', 'ru.stage')
+            ->get();
+        $referralBonus = (int) (class_exists(Settings::class) ? Settings::get('referral_bonus', Settings::get('ref_pts', 100)) : 100);
+        $referralLink = !empty($user->referral_code) ? rtrim(url('/'), '/').'?ref='.$user->referral_code : null;
+        $referralPointsEarned = $referralsMade->where('credited', true)->count() * $referralBonus;
 
         return view('admin.users.show', compact(
             'user','payments','sessions','leads','blobs','reportPts','walletPts','ledger','notes',
             'netWorth','assets','liabilities','incomeExpense','expenses','protection','retirement','goals','family','swp',
-            'toolUsages','portfolio','premiumReports','couponRedemptions'
+            'toolUsages','portfolio','premiumReports','couponRedemptions','referralsMade','referralBonus','referralLink','referralPointsEarned'
         ));
     }
 

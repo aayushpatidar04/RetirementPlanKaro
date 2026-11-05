@@ -390,8 +390,6 @@
         <label>Email<input name="email" type="email" value="{{ $user->email ?? '' }}" required></label>
         <label>City<input name="city" value="{{ $user->city ?? '' }}"></label>
         <label>PAN<input name="pan" value="{{ $user->pan ?? '' }}" maxlength="10"></label>
-        <label class="w" style="grid-column:1/-1;display:flex;gap:8px;align-items:center"><input type="checkbox"
-            name="share_consent" value="1" {{ !empty($user->share_consent) ? 'checked' : '' }}> Share consent</label>
       </div>
       <div class="ac" style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
         <button type="button" class="btn" onclick="document.getElementById('editClient').close()">Cancel</button>
@@ -1253,27 +1251,35 @@
 
   <div id="tab-referrals" style="display:none">
     <div class="card">
-      <h3>Referrals</h3>
+      <h3>Referral summary</h3>
+      <div class="kv">
+        <div><dt>Own referral code</dt><dd>{{ $user->referral_code ?: '—' }}</dd></div>
+        <div><dt>Referral link</dt><dd>@if(!empty($referralLink))<a href="{{ $referralLink }}" target="_blank" rel="noopener">{{ $referralLink }}</a>@else — @endif</dd></div>
+        <div><dt>Referred by</dt><dd>{{ $user->referred_by_code ?: '—' }}</dd></div>
+        <div><dt>Total referred</dt><dd>{{ isset($referralsMade) ? $referralsMade->count() : 0 }}</dd></div>
+        <div><dt>Points earned (referrals)</dt><dd>{{ $referralPointsEarned ?? 0 }}</dd></div>
+        <div><dt>Bonus per referral</dt><dd>{{ $referralBonus ?? 0 }} pts</dd></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Referred people</h3>
       <div class="sc">
-        @if($leads->isEmpty())
-          <div class="em">No referrals.</div>
+        @if(!isset($referralsMade) || $referralsMade->isEmpty())
+          <div class="em">No referrals yet.</div>
         @else
           <table>
-            <thead>
-              <tr>
-                <th>Event</th>
-                <th>Mobile</th>
-                <th>Email</th>
-                <th>Created</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Name</th><th>Mobile</th><th>Email ID</th><th>Sign-up time</th><th>Lead stage</th><th>Verified</th><th>Bonus</th></tr></thead>
             <tbody>
-              @foreach($leads as $l)
+              @foreach($referralsMade as $r)
+                @php $name = trim(($r->name ?? '').' '.($r->surname ?? '')); @endphp
                 <tr>
-                  <td>{{ $l->event }}</td>
-                  <td>{{ $l->mobile ?? '—' }}</td>
-                  <td>{{ $l->email ?? '—' }}</td>
-                  <td>{{ \Illuminate\Support\Carbon::parse($l->created_at)->format('d M Y H:i') }}</td>
+                  <td>{{ $name ?: '—' }}</td>
+                  <td>{{ $r->mobile ?: '—' }}</td>
+                  <td>{{ $r->email ?: '—' }}</td>
+                  <td>{{ $r->signup_at ? \Illuminate\Support\Carbon::parse($r->signup_at)->format('d M Y, H:i') : '—' }}</td>
+                  <td><span class="pill info">{{ $r->stage ?: 'Signed up' }}</span></td>
+                  <td>@if(!empty($r->email_verified_at))<span class="pill ok">Yes</span>@else<span class="pill bad">No</span>@endif</td>
+                  <td>@if($r->credited){{ $referralBonus ?? 0 }} pts @else <span class="pill warn">Pending</span> @endif</td>
                 </tr>
               @endforeach
             </tbody>
