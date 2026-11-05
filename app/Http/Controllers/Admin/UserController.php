@@ -41,30 +41,29 @@ class UserController extends Controller
         $reportPts = (int) DB::table('points_ledger')->where('user_id', $id)->where('account','report')->sum('points');
         $walletPts = (int) DB::table('points_ledger')->where('user_id', $id)->where('account','wallet')->sum('points');
         $ledger = DB::table('points_ledger')->where('user_id', $id)->orderByDesc('id')->limit(50)->get();
+        $notes = DB::table('client_notes')->where('user_id', $id)->orderByDesc('id')->get();
 
-        return view('admin.users.show', compact('user', 'payments', 'sessions', 'leads', 'blobs', 'reportPts', 'walletPts', 'ledger'));
+        return view('admin.users.show', compact('user', 'payments', 'sessions', 'leads', 'blobs', 'reportPts', 'walletPts', 'ledger', 'notes'));
     }
 
 
-    public function adjustPoints(Request $request, int $id): RedirectResponse
+
+    public function storeNote(Request $request, int $id): RedirectResponse
     {
         $data = $request->validate([
-            'kind' => 'required|in:Points,Wallet (₹)',
-            'amount' => 'required|numeric|not_in:0',
-            'reason' => 'required|string|max:120',
+            'note' => 'required|string|max:2000',
+            'author' => 'nullable|string|max:100',
         ]);
-        $account = $data['kind'] === 'Points' ? 'report' : 'wallet';
-        DB::table('points_ledger')->insert([
+        DB::table('client_notes')->insert([
             'user_id' => $id,
-            'account' => $account,
-            'type' => 'admin_adjust',
-            'points' => (int) $data['amount'],
-            'note' => 'Admin: ' . $data['reason'],
+            'author' => $data['author'] ?? 'Owner',
+            'note' => $data['note'],
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        return redirect()->route('admin.users.show', $id)->with('ok', 'Adjustment saved.');
+        return redirect()->route('admin.users.show', $id)->with('ok', 'Note added.');
     }
+
 
 }
 

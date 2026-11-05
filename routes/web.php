@@ -111,6 +111,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('users/{id}', [AdminUserController::class, 'show'])->name('users.show');
         Route::put('users/{id}', [AdminUserController::class, 'update'])->name('users.update');
         Route::post('users/{id}/adjust-points', [AdminUserController::class, 'adjustPoints'])->name('users.adjustPoints');
+        Route::post('users/{id}/notes', [AdminUserController::class, 'storeNote'])->name('users.notes.store');
+
 
 
         Route::get('leads', [AdminLeadController::class, 'index'])->name('leads');

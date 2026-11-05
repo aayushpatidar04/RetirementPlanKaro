@@ -352,7 +352,7 @@
         <div class="ddm">
           <button type="button" class="mi" onclick="document.getElementById('editClient').showModal(); this.closest('details').open=false;">Edit client profile</button>
           <button type="button" class="mi" onclick="document.getElementById('adjustPoints').showModal(); this.closest('details').open=false;">Adjust points / wallet</button>
-          <button class="mi">Add note</button>
+          <button type="button" class="mi" onclick="document.getElementById('addNote').showModal(); this.closest('details').open=false;">Add note</button>
           <button class="mi">Edit tags</button>
           <button class="mi">Export client report</button>
           <button class="mi d">{{ !empty($user->status) && $user->status==='Blocked' ? 'Reinstate account' : 'Suspend account' }}</button>
@@ -393,6 +393,20 @@
       </div>
       <div class="ac" style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
         <button type="button" class="btn" onclick="document.getElementById('adjustPoints').close()">Cancel</button>
+        <button type="submit" class="btn p">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="addNote" style="border:0;padding:0;background:transparent">
+    <form method="POST" action="{{ route('admin.users.notes.store', $user->id) }}" class="mo" style="min-width:360px; background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;display:block">
+      @csrf
+      <h3 style="margin:0 0 12px">Add note</h3>
+      <div class="fg" style="display:grid;grid-template-columns:1fr;gap:10px">
+        <label class="w">Note<textarea name="note" rows="4" required></textarea></label>
+      </div>
+      <div class="ac" style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+        <button type="button" class="btn" onclick="document.getElementById('addNote').close()">Cancel</button>
         <button type="submit" class="btn p">Save</button>
       </div>
     </form>
@@ -636,7 +650,15 @@
     </div>
     <div class="card">
       <h3>Notes</h3>
-      <div class="em">No notes.</div>
+      @if(isset($notes) && $notes->count())
+        <div class="tl">
+          @foreach($notes as $n)
+            <div><b>{{ $n->author }}</b><small>{{ \Illuminate\Support\Carbon::parse($n->created_at)->format('d M Y, H:i') }}</small><div style="margin-top:4px">{{ $n->note }}</div></div>
+          @endforeach
+        </div>
+      @else
+        <div class="em">No notes.</div>
+      @endif
     </div>
   </div>
 
