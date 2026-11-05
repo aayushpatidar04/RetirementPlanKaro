@@ -363,8 +363,10 @@
             onclick="document.getElementById('editTags').showModal(); this.closest('details').open=false;">Edit
             tags</button>
           <button type="button" class="mi" onclick="exportClientReport()">Export client report</button>
-          <button
-            class="mi d">{{ !empty($user->status) && $user->status === 'Blocked' ? 'Reinstate account' : 'Suspend account' }}</button>
+          <form method="POST" action="{{ route('admin.users.suspend', $user->id) }}" style="margin:0" onsubmit="return confirm('{{ (!empty($user->status) && $user->status === 'Blocked') ? 'Reinstate this account?' : 'Suspend this account?' }}')">
+            @csrf
+            <button type="submit" class="mi d" style="width:100%">{{ !empty($user->status) && $user->status === 'Blocked' ? 'Reinstate account' : 'Suspend account' }}</button>
+          </form>
         </div>
       </details>
     </div>
@@ -455,9 +457,6 @@
       </div>
     </form>
   </dialog>
-  </details>
-  </div>
-  </div>
 
   <div class="tabs" id="custTabs">
     <button class="on" data-tab="profile">Profile</button>

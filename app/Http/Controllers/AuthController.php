@@ -83,6 +83,15 @@ class AuthController extends Controller
             }
         }
 
+        $user = User::where($field, $id)->first();
+        if ($user && (($user->status === 'Blocked') || !empty($user->suspended_at))) {
+            return response()->json([
+                'message' => 'Your account has been suspended. Please contact support.',
+                'errors' => ['identifier' => ['Your account has been suspended. Please contact support.']],
+                'suspended' => true,
+            ], 403);
+        }
+
         if (!Auth::attempt([$field => $id, 'password' => $data['password']], true)) {
             return response()->json([
                 'message' => 'Login failed',

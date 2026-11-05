@@ -55,10 +55,10 @@ Route::prefix('api/auth')->group(function () {
     Route::post('logout', [AuthController::class, 'logout']);
 });
 
-Route::middleware('auth')->post('api/auth/verify/resend', [EmailVerificationController::class, 'resend'])
+Route::middleware(['auth','user.active'])->post('api/auth/verify/resend', [EmailVerificationController::class, 'resend'])
     ->middleware('throttle:6,1');
 
-Route::middleware('auth')->prefix('api/plan')->group(function () {
+Route::middleware(['auth','user.active'])->prefix('api/plan')->group(function () {
     Route::get('/', [PlanController::class, 'show']);
     Route::post('net-worth', [PlanController::class, 'netWorth']);
     Route::post('income-expense', [PlanController::class, 'incomeExpense']);
@@ -68,29 +68,29 @@ Route::middleware('auth')->prefix('api/plan')->group(function () {
     Route::post('withdrawal-plan', [WithdrawalController::class, 'store']);
 });
 
-Route::middleware('auth')->prefix('api/checklist')->group(function () {
+Route::middleware(['auth','user.active'])->prefix('api/checklist')->group(function () {
     Route::get('/', [ChecklistController::class, 'index']);
     Route::post('toggle', [ChecklistController::class, 'toggle']);
 });
 
-Route::middleware('auth')->prefix('api/family')->group(function () {
+Route::middleware(['auth','user.active'])->prefix('api/family')->group(function () {
     Route::get('/', [FamilyController::class, 'index']);
     Route::post('/', [FamilyController::class, 'store']);
     Route::put('{id}', [FamilyController::class, 'update']);
     Route::delete('{id}', [FamilyController::class, 'destroy']);
 });
 
-Route::middleware('auth')->prefix('api/points')->group(function () {
+Route::middleware(['auth','user.active'])->prefix('api/points')->group(function () {
     Route::get('balance', [PointsController::class, 'balance']);
     Route::post('streak-check', [PointsController::class, 'streakCheck']);
 });
 
-Route::middleware('auth')->prefix('api/wallet')->group(function () {
+Route::middleware(['auth','user.active'])->prefix('api/wallet')->group(function () {
     Route::get('status', [WalletController::class, 'status']);
     Route::post('unlock', [WalletController::class, 'unlock']);
 });
 
-Route::middleware('auth')->prefix('api')->group(function () {
+Route::middleware(['auth','user.active'])->prefix('api')->group(function () {
     Route::get('report/state', [PayController::class, 'state']);
     Route::post('coupon/check', [PayController::class, 'couponCheck']);
     Route::post('pay/initiate', [PayController::class, 'initiate'])->middleware('throttle:20,1');
@@ -113,6 +113,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('users/{id}/adjust-points', [AdminUserController::class, 'adjustPoints'])->name('users.adjustPoints');
         Route::post('users/{id}/notes', [AdminUserController::class, 'storeNote'])->name('users.notes.store');
         Route::put('users/{id}/tags', [AdminUserController::class, 'updateTags'])->name('users.tags.update');
+        Route::post('users/{id}/suspend', [AdminUserController::class, 'toggleSuspend'])->name('users.suspend');
 
 
 

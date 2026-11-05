@@ -24,6 +24,11 @@ class User extends Authenticatable implements MustVerifyEmailContract
         'share_consent',
         'consented_at',
         'password',
+        'status',
+        'suspended_at',
+        'tags',
+        'stage',
+        'assigned_to',
     ];
 
     protected $hidden = [
@@ -36,6 +41,7 @@ class User extends Authenticatable implements MustVerifyEmailContract
         return [
             'email_verified_at' => 'datetime',
             'consented_at' => 'datetime',
+            'suspended_at' => 'datetime',
             'share_consent' => 'boolean',
             'password' => 'hashed',
         ];

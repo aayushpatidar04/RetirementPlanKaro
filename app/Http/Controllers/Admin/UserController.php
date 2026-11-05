@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Models\User;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -65,7 +66,14 @@ class UserController extends Controller
         return redirect()->route('admin.users.show', $id)->with('ok', 'Tags updated.');
     }
 
-
-
+    public function toggleSuspend(int $id)
+    {
+        $user = User::findOrFail($id);
+        $suspended = ($user->status === 'Blocked') || !empty($user->suspended_at);
+        $user->status = $suspended ? 'Active' : 'Blocked';
+        $user->suspended_at = $suspended ? null : now();
+        $user->save();
+        return redirect()->route('admin.users.show', $id)->with('ok', $suspended ? 'Account reinstated.' : 'Account suspended.');
+    }
 }
 
