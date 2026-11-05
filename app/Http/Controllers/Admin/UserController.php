@@ -54,10 +54,14 @@ class UserController extends Controller
         $goals = DB::table('life_goals')->where('user_id', $id)->orderBy('id')->get();
         $family = DB::table('family_members')->where('user_id', $id)->orderBy('id')->get();
         $swp = DB::table('swp_settings')->where('user_id', $id)->first();
+        $toolUsages = DB::table('tool_usages')->where('user_id', $id)->orderByDesc('used_at')->orderByDesc('id')->get();
+        $portfolioBlob = DB::table('user_blobs')->where('user_id', $id)->where('kind', 'portfolio')->value('data');
+        $portfolio = $portfolioBlob ? json_decode($portfolioBlob, true) : null;
 
         return view('admin.users.show', compact(
             'user','payments','sessions','leads','blobs','reportPts','walletPts','ledger','notes',
-            'netWorth','assets','liabilities','incomeExpense','expenses','protection','retirement','goals','family','swp'
+            'netWorth','assets','liabilities','incomeExpense','expenses','protection','retirement','goals','family','swp',
+            'toolUsages','portfolio'
         ));
     }
 

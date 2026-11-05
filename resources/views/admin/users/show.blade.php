@@ -363,11 +363,14 @@
             onclick="document.getElementById('editTags').showModal(); this.closest('details').open=false;">Edit
             tags</button>
           <button type="button" class="mi"
-            onclick="document.getElementById('editPlanner').showModal(); this.closest('details').open=false;">Edit planner inputs</button>
+            onclick="document.getElementById('editPlanner').showModal(); this.closest('details').open=false;">Edit planner
+            inputs</button>
           <button type="button" class="mi" onclick="exportClientReport()">Export client report</button>
-          <form method="POST" action="{{ route('admin.users.suspend', $user->id) }}" style="margin:0" onsubmit="return confirm('{{ (!empty($user->status) && $user->status === 'Blocked') ? 'Reinstate this account?' : 'Suspend this account?' }}')">
+          <form method="POST" action="{{ route('admin.users.suspend', $user->id) }}" style="margin:0"
+            onsubmit="return confirm('{{ (!empty($user->status) && $user->status === 'Blocked') ? 'Reinstate this account?' : 'Suspend this account?' }}')">
             @csrf
-            <button type="submit" class="mi d" style="width:100%">{{ !empty($user->status) && $user->status === 'Blocked' ? 'Reinstate account' : 'Suspend account' }}</button>
+            <button type="submit" class="mi d"
+              style="width:100%">{{ !empty($user->status) && $user->status === 'Blocked' ? 'Reinstate account' : 'Suspend account' }}</button>
           </form>
         </div>
       </details>
@@ -461,7 +464,8 @@
   </dialog>
 
   <dialog id="editPlanner" style="border:0;padding:0;background:transparent">
-    <form method="POST" action="{{ route('admin.users.planner.update', $user->id) }}" class="mo" style="width:min(920px,98vw);background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;display:block;max-height:90vh;overflow:auto">
+    <form method="POST" action="{{ route('admin.users.planner.update', $user->id) }}" class="mo"
+      style="width:min(920px,98vw);background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;display:block;max-height:90vh;overflow:auto">
       @csrf
       @method('PUT')
       <h3 style="margin:0 0 12px">Edit planner inputs – {{ $fullname ?? 'Client' }}</h3>
@@ -470,59 +474,87 @@
       <div class="fg" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <label>Age<input name="nw_age" type="number" step="1" value="{{ $netWorth->age ?? '' }}"></label>
         <label>Country<input name="nw_country" value="{{ $netWorth->country ?? 'IN' }}" maxlength="2"></label>
-        <label class="w" style="grid-column:1/-1">Liquid assets (one per line: label = amount)<textarea name="assets_liquid" rows="4">@foreach($liq??[] as $a){{ $a->label }} = {{ $a->amount }}
-@endforeach</textarea></label>
-        <label class="w" style="grid-column:1/-1">Non-liquid assets (one per line: label = amount)<textarea name="assets_non" rows="4">@foreach($nliq??[] as $a){{ $a->label }} = {{ $a->amount }}
-@endforeach</textarea></label>
-        <label class="w" style="grid-column:1/-1">Liabilities (one per line: label = amount)<textarea name="liabilities" rows="3">@foreach($liabilities??[] as $l){{ $l->label }} = {{ $l->amount }}
-@endforeach</textarea></label>
+        <label class="w" style="grid-column:1/-1">Liquid assets (one per line: label = amount)<textarea
+            name="assets_liquid" rows="4">@foreach($liq ?? [] as $a){{ $a->label }} = {{ $a->amount }}
+            @endforeach</textarea></label>
+        <label class="w" style="grid-column:1/-1">Non-liquid assets (one per line: label = amount)<textarea
+            name="assets_non" rows="4">@foreach($nliq ?? [] as $a){{ $a->label }} = {{ $a->amount }}
+            @endforeach</textarea></label>
+        <label class="w" style="grid-column:1/-1">Liabilities (one per line: label = amount)<textarea name="liabilities"
+            rows="3">@foreach($liabilities ?? [] as $l){{ $l->label }} = {{ $l->amount }}
+            @endforeach</textarea></label>
       </div>
 
       <h4 style="margin:14px 0 6px">Step 2 · Income & expenses</h4>
       <div class="fg" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <label>Monthly income (₹)<input name="monthly_income" type="number" step="0.01" value="{{ $incomeExpense->monthly_income ?? '' }}"></label>
-        <label class="w" style="grid-column:1/-1">Expenses (one per line: label = amount [* for essential])<textarea name="expenses" rows="4">@foreach($expenses??[] as $e){{ $e->label }} = {{ $e->amount }}{{ $e->is_essential ? ' *' : '' }}
-@endforeach</textarea></label>
+        <label>Monthly income (₹)<input name="monthly_income" type="number" step="0.01"
+            value="{{ $incomeExpense->monthly_income ?? '' }}"></label>
+        <label class="w" style="grid-column:1/-1">Expenses (one per line: label = amount [* for essential])<textarea
+            name="expenses" rows="4">@foreach($expenses ?? [] as $e){{ $e->label }} = {{ $e->amount }}{{ $e->is_essential ? ' *' : '' }}
+            @endforeach</textarea></label>
       </div>
 
       <h4 style="margin:14px 0 6px">Protection</h4>
       <div class="fg" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <label>Life insurance<select name="life_insurance"><option value="No" {{ ($protection->life_insurance??'No')==='No'?'selected':'' }}>No</option><option value="Yes" {{ ($protection->life_insurance??'')==='Yes'?'selected':'' }}>Yes</option></select></label>
-        <label>Life cover (₹)<input name="life_cover" type="number" step="0.01" value="{{ $protection->life_cover ?? '' }}"></label>
-        <label>Term premium (₹)<input name="term_premium" type="number" step="0.01" value="{{ $protection->term_premium ?? '' }}"></label>
-        <label>Term till age<input name="term_till_age" type="number" step="1" value="{{ $protection->term_till_age ?? '' }}"></label>
+        <label>Life insurance<select name="life_insurance">
+            <option value="No" {{ ($protection->life_insurance ?? 'No') === 'No' ? 'selected' : '' }}>No</option>
+            <option value="Yes" {{ ($protection->life_insurance ?? '') === 'Yes' ? 'selected' : '' }}>Yes</option>
+          </select></label>
+        <label>Life cover (₹)<input name="life_cover" type="number" step="0.01"
+            value="{{ $protection->life_cover ?? '' }}"></label>
+        <label>Term premium (₹)<input name="term_premium" type="number" step="0.01"
+            value="{{ $protection->term_premium ?? '' }}"></label>
+        <label>Term till age<input name="term_till_age" type="number" step="1"
+            value="{{ $protection->term_till_age ?? '' }}"></label>
         <label>Health type<input name="health_type" value="{{ $protection->health_type ?? 'None' }}"></label>
-        <label>Health cover (₹)<input name="health_cover" type="number" step="0.01" value="{{ $protection->health_cover ?? '' }}"></label>
-        <label>Health premium (₹)<input name="health_premium" type="number" step="0.01" value="{{ $protection->health_premium ?? '' }}"></label>
-        <label>Health top-up<select name="health_topup"><option value="No" {{ ($protection->health_topup??'No')==='No'?'selected':'' }}>No</option><option value="Yes" {{ ($protection->health_topup??'')==='Yes'?'selected':'' }}>Yes</option></select></label>
-        <label>Emergency fund (₹)<input name="emergency_fund" type="number" step="0.01" value="{{ $protection->emergency_fund ?? '' }}"></label>
-        <label>Emergency kept in<input name="emergency_where" value="{{ $protection->emergency_where ?? 'Savings account' }}"></label>
+        <label>Health cover (₹)<input name="health_cover" type="number" step="0.01"
+            value="{{ $protection->health_cover ?? '' }}"></label>
+        <label>Health premium (₹)<input name="health_premium" type="number" step="0.01"
+            value="{{ $protection->health_premium ?? '' }}"></label>
+        <label>Health top-up<select name="health_topup">
+            <option value="No" {{ ($protection->health_topup ?? 'No') === 'No' ? 'selected' : '' }}>No</option>
+            <option value="Yes" {{ ($protection->health_topup ?? '') === 'Yes' ? 'selected' : '' }}>Yes</option>
+          </select></label>
+        <label>Emergency fund (₹)<input name="emergency_fund" type="number" step="0.01"
+            value="{{ $protection->emergency_fund ?? '' }}"></label>
+        <label>Emergency kept in<input name="emergency_where"
+            value="{{ $protection->emergency_where ?? 'Savings account' }}"></label>
       </div>
 
       <h4 style="margin:14px 0 6px">Step 3 · Retirement</h4>
       <div class="fg" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <label>Retire at age<input name="retirement_age" type="number" step="1" value="{{ $retirement->retirement_age ?? '' }}"></label>
-        <label>Life expectancy<input name="life_expectancy" type="number" step="1" value="{{ $retirement->life_expectancy ?? '' }}"></label>
-        <label>Monthly spending (₹)<input name="monthly_spending" type="number" step="0.01" value="{{ $retirement->monthly_spending ?? '' }}"></label>
-        <label>Other monthly income (₹)<input name="other_income" type="number" step="0.01" value="{{ $retirement->other_income ?? '' }}"></label>
-        <label>Inflation %<input name="inflation_rate" type="number" step="0.01" value="{{ $retirement->inflation_rate ?? '' }}"></label>
-        <label>Return pre-retirement %<input name="return_pre" type="number" step="0.01" value="{{ $retirement->return_pre ?? '' }}"></label>
-        <label>Return post-retirement %<input name="return_post" type="number" step="0.01" value="{{ $retirement->return_post ?? '' }}"></label>
-        <label>Current corpus (₹)<input name="current_corpus" type="number" step="0.01" value="{{ $retirement->current_corpus ?? '' }}"></label>
-        <label>Monthly SIP (₹)<input name="monthly_sip" type="number" step="0.01" value="{{ $retirement->monthly_sip ?? '' }}"></label>
-        <label>Step-up %<input name="step_up_percent" type="number" step="0.01" value="{{ $retirement->step_up_percent ?? '' }}"></label>
+        <label>Retire at age<input name="retirement_age" type="number" step="1"
+            value="{{ $retirement->retirement_age ?? '' }}"></label>
+        <label>Life expectancy<input name="life_expectancy" type="number" step="1"
+            value="{{ $retirement->life_expectancy ?? '' }}"></label>
+        <label>Monthly spending (₹)<input name="monthly_spending" type="number" step="0.01"
+            value="{{ $retirement->monthly_spending ?? '' }}"></label>
+        <label>Other monthly income (₹)<input name="other_income" type="number" step="0.01"
+            value="{{ $retirement->other_income ?? '' }}"></label>
+        <label>Inflation %<input name="inflation_rate" type="number" step="0.01"
+            value="{{ $retirement->inflation_rate ?? '' }}"></label>
+        <label>Return pre-retirement %<input name="return_pre" type="number" step="0.01"
+            value="{{ $retirement->return_pre ?? '' }}"></label>
+        <label>Return post-retirement %<input name="return_post" type="number" step="0.01"
+            value="{{ $retirement->return_post ?? '' }}"></label>
+        <label>Current corpus (₹)<input name="current_corpus" type="number" step="0.01"
+            value="{{ $retirement->current_corpus ?? '' }}"></label>
+        <label>Monthly SIP (₹)<input name="monthly_sip" type="number" step="0.01"
+            value="{{ $retirement->monthly_sip ?? '' }}"></label>
+        <label>Step-up %<input name="step_up_percent" type="number" step="0.01"
+            value="{{ $retirement->step_up_percent ?? '' }}"></label>
       </div>
 
       <h4 style="margin:14px 0 6px">Step 4 · Life goals (one per line: name = amount @ age)</h4>
       <div class="fg" style="display:grid;grid-template-columns:1fr;gap:10px">
-        <label class="w"><textarea name="goals" rows="3">@foreach($goals??[] as $g){{ $g->name }} = {{ $g->cost_today }} @ {{ $g->target_age }}
-@endforeach</textarea></label>
+        <label class="w"><textarea name="goals" rows="3">@foreach($goals ?? [] as $g){{ $g->name }} = {{ $g->cost_today }} @ {{ $g->target_age }}
+        @endforeach</textarea></label>
       </div>
 
       <h4 style="margin:14px 0 6px">Family members (one per line: name | relation | age)</h4>
       <div class="fg" style="display:grid;grid-template-columns:1fr;gap:10px">
-        <label class="w"><textarea name="family" rows="3">@foreach($family??[] as $f){{ $f->name }} | {{ $f->rel }} | {{ $f->age }}
-@endforeach</textarea></label>
+        <label class="w"><textarea name="family" rows="3">@foreach($family ?? [] as $f){{ $f->name }} | {{ $f->rel }} | {{ $f->age }}
+        @endforeach</textarea></label>
       </div>
 
       <h4 style="margin:14px 0 6px">SWP settings</h4>
@@ -692,90 +724,281 @@
   <div id="tab-planner" style="display:none">
     @php
       $hasPlan = $netWorth || $incomeExpense || $retirement || ($assets && $assets->count()) || ($liabilities && $liabilities->count()) || ($goals && $goals->count()) || ($family && $family->count());
-      $liq = $assets ? $assets->where('type','liquid') : collect();
-      $nliq = $assets ? $assets->where('type','non_liquid') : collect();
-      $inr = fn($n) => '₹'.number_format((float)$n, 0);
+      $liq = $assets ? $assets->where('type', 'liquid') : collect();
+      $nliq = $assets ? $assets->where('type', 'non_liquid') : collect();
+      $inr = fn($n) => '₹' . number_format((float) $n, 0);
       $nwVal = $liq->sum('amount') + $nliq->sum('amount') - ($liabilities ? $liabilities->sum('amount') : 0);
       $totExp = $expenses ? $expenses->sum('amount') : 0;
       $monInc = $incomeExpense->monthly_income ?? 0;
     @endphp
-    <div style="margin-bottom:12px"><button type="button" class="btn p" onclick="document.getElementById('editPlanner').showModal()">Edit planner inputs</button></div>
+    <div style="margin-bottom:12px"><button type="button" class="btn p"
+        onclick="document.getElementById('editPlanner').showModal()">Edit planner inputs</button></div>
     @if(!$hasPlan)
-      <div class="card"><h3>Planner</h3><div class="em">This customer has not started the planner.</div></div>
+      <div class="card">
+        <h3>Planner</h3>
+        <div class="em">This customer has not started the planner.</div>
+      </div>
     @else
-      <div class="card"><h3>Step 1 · Net worth today</h3>
-        <div class="sc"><table><thead><tr><th>Group</th><th>Name</th><th>Value</th></tr></thead><tbody>
-          @foreach($liq as $a)<tr><td>Liquid asset</td><td>{{ $a->label }}</td><td>{{ $inr($a->amount) }}</td></tr>@endforeach
-          @foreach($nliq as $a)<tr><td>Non-liquid asset</td><td>{{ $a->label }}</td><td>{{ $inr($a->amount) }}</td></tr>@endforeach
-          @foreach(($liabilities??collect()) as $l)<tr><td>Liability</td><td>{{ $l->label }}</td><td>{{ $inr($l->amount) }}</td></tr>@endforeach
-          @if(!$liq->count() && !$nliq->count() && !($liabilities && $liabilities->count()))<tr><td colspan="3" class="em">No data.</td></tr>@endif
-        </tbody></table></div>
+      <div class="card">
+        <h3>Step 1 · Net worth today</h3>
+        <div class="sc">
+          <table>
+            <thead>
+              <tr>
+                <th>Group</th>
+                <th>Name</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              @foreach($liq as $a)
+                <tr>
+                  <td>Liquid asset</td>
+                  <td>{{ $a->label }}</td>
+                  <td>{{ $inr($a->amount) }}</td>
+              </tr>@endforeach
+              @foreach($nliq as $a)
+                <tr>
+                  <td>Non-liquid asset</td>
+                  <td>{{ $a->label }}</td>
+                  <td>{{ $inr($a->amount) }}</td>
+              </tr>@endforeach
+              @foreach(($liabilities ?? collect()) as $l)
+                <tr>
+                  <td>Liability</td>
+                  <td>{{ $l->label }}</td>
+                  <td>{{ $inr($l->amount) }}</td>
+              </tr>@endforeach
+              @if(!$liq->count() && !$nliq->count() && !($liabilities && $liabilities->count()))
+                <tr>
+                  <td colspan="3" class="em">No data.</td>
+              </tr>@endif
+            </tbody>
+          </table>
+        </div>
         <div class="kv">
-          <div><dt>Age / Country</dt><dd>{{ $netWorth->age ?? '—' }}{{ !empty($netWorth->country)?' · '.$netWorth->country:'' }}</dd></div>
-          <div><dt>Total liquid</dt><dd>{{ $inr($liq->sum('amount')) }}</dd></div>
-          <div><dt>Total non-liquid</dt><dd>{{ $inr($nliq->sum('amount')) }}</dd></div>
-          <div><dt>Total liabilities</dt><dd>{{ $inr($liabilities ? $liabilities->sum('amount') : 0) }}</dd></div>
-          <div><dt>Net worth</dt><dd>{{ $inr($nwVal) }}</dd></div>
+          <div>
+            <dt>Age / Country</dt>
+            <dd>{{ $netWorth->age ?? '—' }}{{ !empty($netWorth->country) ? ' · ' . $netWorth->country : '' }}</dd>
+          </div>
+          <div>
+            <dt>Total liquid</dt>
+            <dd>{{ $inr($liq->sum('amount')) }}</dd>
+          </div>
+          <div>
+            <dt>Total non-liquid</dt>
+            <dd>{{ $inr($nliq->sum('amount')) }}</dd>
+          </div>
+          <div>
+            <dt>Total liabilities</dt>
+            <dd>{{ $inr($liabilities ? $liabilities->sum('amount') : 0) }}</dd>
+          </div>
+          <div>
+            <dt>Net worth</dt>
+            <dd>{{ $inr($nwVal) }}</dd>
+          </div>
         </div>
       </div>
 
-      <div class="card"><h3>Step 2 · Income & monthly expenses</h3>
+      <div class="card">
+        <h3>Step 2 · Income & monthly expenses</h3>
         <div class="kv">
-          <div><dt>Monthly income</dt><dd>{{ $incomeExpense ? $inr($monInc) : '—' }}</dd></div>
-          <div><dt>Total monthly expenses</dt><dd>{{ $inr($totExp) }}</dd></div>
-          <div><dt>Monthly surplus</dt><dd>{{ $incomeExpense ? $inr($monInc - $totExp) : '—' }}</dd></div>
+          <div>
+            <dt>Monthly income</dt>
+            <dd>{{ $incomeExpense ? $inr($monInc) : '—' }}</dd>
+          </div>
+          <div>
+            <dt>Total monthly expenses</dt>
+            <dd>{{ $inr($totExp) }}</dd>
+          </div>
+          <div>
+            <dt>Monthly surplus</dt>
+            <dd>{{ $incomeExpense ? $inr($monInc - $totExp) : '—' }}</dd>
+          </div>
         </div>
-        <div class="sc"><table><thead><tr><th>Expense category</th><th>Monthly amount</th><th>Essential</th></tr></thead><tbody>
-          @forelse(($expenses??collect()) as $e)<tr><td>{{ $e->label }}</td><td>{{ $inr($e->amount) }}</td><td>{{ $e->is_essential ? 'Yes':'No' }}</td></tr>@empty<tr><td colspan="3" class="em">No expenses recorded.</td></tr>@endforelse
-        </tbody></table></div>
+        <div class="sc">
+          <table>
+            <thead>
+              <tr>
+                <th>Expense category</th>
+                <th>Monthly amount</th>
+                <th>Essential</th>
+              </tr>
+            </thead>
+            <tbody>
+              @forelse(($expenses ?? collect()) as $e)
+                <tr>
+                  <td>{{ $e->label }}</td>
+                  <td>{{ $inr($e->amount) }}</td>
+                  <td>{{ $e->is_essential ? 'Yes' : 'No' }}</td>
+              </tr>@empty<tr>
+                <td colspan="3" class="em">No expenses recorded.</td>
+              </tr>@endforelse
+            </tbody>
+          </table>
+        </div>
       </div>
 
       @if($protection)
-      <div class="card"><h3>Protection</h3><div class="kv">
-        <div><dt>Life insurance</dt><dd>{{ $protection->life_insurance ?? '—' }}{{ ($protection->life_cover??0)?' · '.$inr($protection->life_cover):'' }}</dd></div>
-        <div><dt>Term premium / till age</dt><dd>{{ $inr($protection->term_premium ?? 0) }}{{ ($protection->term_till_age??0)?' · age '.$protection->term_till_age:'' }}</dd></div>
-        <div><dt>Health</dt><dd>{{ $protection->health_type ?? '—' }}{{ ($protection->health_cover??0)?' · '.$inr($protection->health_cover):'' }}</dd></div>
-        <div><dt>Health premium / top-up</dt><dd>{{ $inr($protection->health_premium ?? 0) }} · {{ $protection->health_topup ?? '—' }}</dd></div>
-        <div><dt>Emergency fund</dt><dd>{{ $inr($protection->emergency_fund ?? 0) }}</dd></div>
-        <div><dt>Emergency kept in</dt><dd>{{ $protection->emergency_where ?? '—' }}</dd></div>
-      </div></div>
+        <div class="card">
+          <h3>Protection</h3>
+          <div class="kv">
+            <div>
+              <dt>Life insurance</dt>
+              <dd>
+                {{ $protection->life_insurance ?? '—' }}{{ ($protection->life_cover ?? 0) ? ' · ' . $inr($protection->life_cover) : '' }}
+              </dd>
+            </div>
+            <div>
+              <dt>Term premium / till age</dt>
+              <dd>
+                {{ $inr($protection->term_premium ?? 0) }}{{ ($protection->term_till_age ?? 0) ? ' · age ' . $protection->term_till_age : '' }}
+              </dd>
+            </div>
+            <div>
+              <dt>Health</dt>
+              <dd>
+                {{ $protection->health_type ?? '—' }}{{ ($protection->health_cover ?? 0) ? ' · ' . $inr($protection->health_cover) : '' }}
+              </dd>
+            </div>
+            <div>
+              <dt>Health premium / top-up</dt>
+              <dd>{{ $inr($protection->health_premium ?? 0) }} · {{ $protection->health_topup ?? '—' }}</dd>
+            </div>
+            <div>
+              <dt>Emergency fund</dt>
+              <dd>{{ $inr($protection->emergency_fund ?? 0) }}</dd>
+            </div>
+            <div>
+              <dt>Emergency kept in</dt>
+              <dd>{{ $protection->emergency_where ?? '—' }}</dd>
+            </div>
+          </div>
+        </div>
       @endif
 
-      <div class="card"><h3>Step 3 · Retirement plan inputs</h3>
+      <div class="card">
+        <h3>Step 3 · Retirement plan inputs</h3>
         @if($retirement)
           <div class="kv">
-            <div><dt>Retire at</dt><dd>{{ $retirement->retirement_age ?? '—' }}</dd></div>
-            <div><dt>Life expectancy</dt><dd>{{ $retirement->life_expectancy ?? '—' }}</dd></div>
-            <div><dt>Monthly spending (today)</dt><dd>{{ $inr($retirement->monthly_spending ?? 0) }}</dd></div>
-            <div><dt>Other monthly income</dt><dd>{{ $inr($retirement->other_income ?? 0) }}</dd></div>
-            <div><dt>Inflation %</dt><dd>{{ $retirement->inflation_rate ?? '—' }}%</dd></div>
-            <div><dt>Return pre/post retirement</dt><dd>{{ $retirement->return_pre ?? '—' }}% / {{ $retirement->return_post ?? '—' }}%</dd></div>
-            <div><dt>Current corpus</dt><dd>{{ $inr($retirement->current_corpus ?? 0) }}</dd></div>
-            <div><dt>Monthly SIP</dt><dd>{{ $inr($retirement->monthly_sip ?? 0) }}</dd></div>
-            <div><dt>Step-up %</dt><dd>{{ $retirement->step_up_percent ?? '—' }}%</dd></div>
+            <div>
+              <dt>Retire at</dt>
+              <dd>{{ $retirement->retirement_age ?? '—' }}</dd>
+            </div>
+            <div>
+              <dt>Life expectancy</dt>
+              <dd>{{ $retirement->life_expectancy ?? '—' }}</dd>
+            </div>
+            <div>
+              <dt>Monthly spending (today)</dt>
+              <dd>{{ $inr($retirement->monthly_spending ?? 0) }}</dd>
+            </div>
+            <div>
+              <dt>Other monthly income</dt>
+              <dd>{{ $inr($retirement->other_income ?? 0) }}</dd>
+            </div>
+            <div>
+              <dt>Inflation %</dt>
+              <dd>{{ $retirement->inflation_rate ?? '—' }}%</dd>
+            </div>
+            <div>
+              <dt>Return pre/post retirement</dt>
+              <dd>{{ $retirement->return_pre ?? '—' }}% / {{ $retirement->return_post ?? '—' }}%</dd>
+            </div>
+            <div>
+              <dt>Current corpus</dt>
+              <dd>{{ $inr($retirement->current_corpus ?? 0) }}</dd>
+            </div>
+            <div>
+              <dt>Monthly SIP</dt>
+              <dd>{{ $inr($retirement->monthly_sip ?? 0) }}</dd>
+            </div>
+            <div>
+              <dt>Step-up %</dt>
+              <dd>{{ $retirement->step_up_percent ?? '—' }}%</dd>
+            </div>
           </div>
         @else
           <div class="em">No retirement plan inputs saved.</div>
         @endif
       </div>
 
-      <div class="card"><h3>Step 4 · Life goals</h3>
-        <div class="sc"><table><thead><tr><th>Goal</th><th>Target amount (today)</th><th>At age</th></tr></thead><tbody>
-          @forelse(($goals??collect()) as $g)<tr><td>{{ $g->name }}</td><td>{{ $inr($g->cost_today ?? 0) }}</td><td>{{ $g->target_age ?? '—' }}</td></tr>@empty<tr><td colspan="3" class="em">No goals recorded.</td></tr>@endforelse
-        </tbody></table></div>
+      <div class="card">
+        <h3>Step 4 · Life goals</h3>
+        <div class="sc">
+          <table>
+            <thead>
+              <tr>
+                <th>Goal</th>
+                <th>Target amount (today)</th>
+                <th>At age</th>
+              </tr>
+            </thead>
+            <tbody>
+              @forelse(($goals ?? collect()) as $g)
+                <tr>
+                  <td>{{ $g->name }}</td>
+                  <td>{{ $inr($g->cost_today ?? 0) }}</td>
+                  <td>{{ $g->target_age ?? '—' }}</td>
+              </tr>@empty<tr>
+                <td colspan="3" class="em">No goals recorded.</td>
+              </tr>@endforelse
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div class="card"><h3>Family members</h3>
-        <div class="sc"><table><thead><tr><th>Name</th><th>Relation</th><th>Age</th><th>Income</th><th>Expenses</th><th>Liquid</th><th>Illiquid</th><th>Debt</th><th>SIP</th></tr></thead><tbody>
-          @forelse(($family??collect()) as $f)<tr><td>{{ $f->name }}</td><td>{{ $f->rel ?? '—' }}</td><td>{{ $f->age ?? '—' }}</td><td>{{ $inr($f->inc ?? 0) }}</td><td>{{ $inr($f->exp ?? 0) }}</td><td>{{ $inr($f->liq ?? 0) }}</td><td>{{ $inr($f->ill ?? 0) }}</td><td>{{ $inr($f->debt ?? 0) }}</td><td>{{ $inr($f->sip ?? 0) }}</td></tr>@empty<tr><td colspan="9" class="em">No family members recorded.</td></tr>@endforelse
-        </tbody></table></div>
+      <div class="card">
+        <h3>Family members</h3>
+        <div class="sc">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Relation</th>
+                <th>Age</th>
+                <th>Income</th>
+                <th>Expenses</th>
+                <th>Liquid</th>
+                <th>Illiquid</th>
+                <th>Debt</th>
+                <th>SIP</th>
+              </tr>
+            </thead>
+            <tbody>
+              @forelse(($family ?? collect()) as $f)
+                <tr>
+                  <td>{{ $f->name }}</td>
+                  <td>{{ $f->rel ?? '—' }}</td>
+                  <td>{{ $f->age ?? '—' }}</td>
+                  <td>{{ $inr($f->inc ?? 0) }}</td>
+                  <td>{{ $inr($f->exp ?? 0) }}</td>
+                  <td>{{ $inr($f->liq ?? 0) }}</td>
+                  <td>{{ $inr($f->ill ?? 0) }}</td>
+                  <td>{{ $inr($f->debt ?? 0) }}</td>
+                  <td>{{ $inr($f->sip ?? 0) }}</td>
+              </tr>@empty<tr>
+                <td colspan="9" class="em">No family members recorded.</td>
+              </tr>@endforelse
+            </tbody>
+          </table>
+        </div>
       </div>
 
       @if($swp)
-      <div class="card"><h3>SWP settings</h3><div class="kv">
-        <div><dt>Mode</dt><dd>{{ $swp->mode ?? '—' }}</dd></div>
-        <div><dt>Show filter</dt><dd>{{ $swp->show_filter ?? '—' }}</dd></div>
-      </div></div>
+        <div class="card">
+          <h3>SWP settings</h3>
+          <div class="kv">
+            <div>
+              <dt>Mode</dt>
+              <dd>{{ $swp->mode ?? '—' }}</dd>
+            </div>
+            <div>
+              <dt>Show filter</dt>
+              <dd>{{ $swp->show_filter ?? '—' }}</dd>
+            </div>
+          </div>
+        </div>
       @endif
     @endif
   </div>
@@ -896,23 +1119,58 @@
 
   <div id="tab-tools" style="display:none">
     <div class="card">
-      <h3>Tools usage</h3>
+      <h3>Calculators used</h3>
       <div class="sc">
-        <table>
-          <thead>
-            <tr>
-              <th>Tool</th>
-              <th>Last used</th>
-              <th>Details</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td colspan="3" class="em">No tool usage recorded.</td>
-            </tr>
-          </tbody>
-        </table>
+        @if(($toolUsages ?? collect())->isEmpty())
+          <div class="em">No tools used yet.</div>
+        @else
+          <table>
+            <thead>
+              <tr>
+                <th>Tool</th>
+                <th>When</th>
+                <th>Inputs used</th>
+              </tr>
+            </thead>
+            <tbody>
+              @foreach($toolUsages as $t)
+                @php
+                  $when = $t->used_at ? \Illuminate\Support\Carbon::parse($t->used_at)->format('d M Y, H:i') : ($t->created_at ? \Illuminate\Support\Carbon::parse($t->created_at)->format('d M Y, H:i') : '—');
+                  $details = $t->summary ?? '';
+                  if (!$details && !empty($t->inputs)) {
+                    $inp = is_string($t->inputs) ? json_decode($t->inputs, true) : $t->inputs;
+                    $details = is_array($inp) ? collect($inp)->map(fn($v, $k) => $k . ': ' . (is_scalar($v) ? $v : json_encode($v)))->implode(', ') : (string) $t->inputs;
+                  }
+                @endphp
+                <tr>
+                  <td>{{ $t->tool }}</td>
+                  <td>{{ $when }}</td>
+                  <td style="white-space:normal">{{ $details ?: '—' }}</td>
+                </tr>
+              @endforeach
+            </tbody>
+          </table>
+        @endif
       </div>
+    </div>
+    <div class="card">
+      <h3>Stock portfolio analysis</h3>
+      @if(!empty($portfolio))
+        <div class="kv">
+          @foreach((is_array($portfolio) ? $portfolio : []) as $k => $v)
+            <div>
+              <dt>{{ is_string($k) ? ucwords(str_replace(['_', '-'], ' ', $k)) : 'Field' }}</dt>
+              <dd style="white-space:normal">
+                {{ is_scalar($v) || is_null($v) ? ($v ?? '—') : json_encode($v, JSON_UNESCAPED_UNICODE) }}
+              </dd>
+            </div>
+          @endforeach
+        </div>
+        @if(empty($portfolio))
+        <div class="em">Not uploaded</div>@endif
+      @else
+        <div class="em">Not uploaded</div>
+      @endif
     </div>
   </div>
 
@@ -1046,10 +1304,82 @@
         });
         S.push({ name: 'Payments', title: 'Payments', sub: T, head: ['Txn ID', 'Purpose', 'Amount', 'Status', 'PayU ID', 'When'], rows: [@foreach(($payments ?? []) as $p)[@json($p->txnid), @json($p->purpose), @json((float) $p->amount), @json($p->status), @json($p->payu_id ?? ''), @json(\Illuminate\Support\Carbon::parse($p->created_at)->format('d M Y, H:i'))], @endforeach] });
         S.push({ name: 'Sessions', title: 'Guidance sessions', sub: T, head: ['Date', 'Slot', 'Mode', 'Status', 'Note'], rows: [@foreach(($sessions ?? []) as $s)[@json($s->date), @json($s->slot), @json($s->mode), @json($s->status), @json($s->note ?? '')], @endforeach] });
-        S.push({ name: 'Planner assets', title: 'Planner · Assets & liabilities', sub: T, head: ['Group','Name','Amount'], rows: [@foreach(($assets??[]) as $a)[@json(($a->type??'')==='liquid'?'Liquid asset':'Non-liquid asset'),@json($a->label),@json((float)$a->amount)],@endforeach @foreach(($liabilities??[]) as $l)['Liability',@json($l->label),@json((float)$l->amount)],@endforeach] });
-        S.push({ name: 'Expenses', title: 'Planner · Income & expenses', sub: T, head: ['Category','Amount','Essential'], rows: [['Monthly income',@json((float)($incomeExpense->monthly_income??0)),''],@foreach(($expenses??[]) as $e)[@json($e->label),@json((float)$e->amount),@json($e->is_essential?'Yes':'No')],@endforeach] });
-        S.push({ name: 'Retirement', title: 'Planner · Retirement inputs', sub: T, head: ['Field','Value'], rows: [['Retire at',@json($retirement->retirement_age??'')],['Life expectancy',@json($retirement->life_expectancy??'')],['Monthly spending',@json((float)($retirement->monthly_spending??0))],['Other income',@json((float)($retirement->other_income??0))],['Inflation %',@json($retirement->inflation_rate??'')],['Return pre %',@json($retirement->return_pre??'')],['Return post %',@json($retirement->return_post??'')],['Current corpus',@json((float)($retirement->current_corpus??0))],['Monthly SIP',@json((float)($retirement->monthly_sip??0))],['Step-up %',@json($retirement->step_up_percent??'')]] });
-        S.push({ name: 'Goals & family', title: 'Planner · Goals & family', sub: T, head: ['Type','Name','Detail 1','Detail 2'], rows: [@foreach(($goals??[]) as $g)['Goal',@json($g->name),@json((float)($g->cost_today??0)),@json($g->target_age??'')],@endforeach @foreach(($family??[]) as $f)['Family',@json($f->name),@json($f->rel??''),@json($f->age??'')],@endforeach] });
+        @php
+          $plannerAssetRows = [];
+
+          foreach (($assets ?? []) as $a) {
+            $plannerAssetRows[] = [
+              ($a->type ?? '') === 'liquid' ? 'Liquid asset' : 'Non-liquid asset',
+              $a->label,
+              (float) $a->amount,
+            ];
+          }
+
+          foreach (($liabilities ?? []) as $l) {
+            $plannerAssetRows[] = [
+              'Liability',
+              $l->label,
+              (float) $l->amount,
+            ];
+          }
+        @endphp
+
+        S.push({
+          name: 'Planner assets',
+          title: 'Planner · Assets & liabilities',
+          sub: T,
+          head: ['Group', 'Name', 'Amount'],
+          rows: @json($plannerAssetRows)
+        });
+        S.push({ name: 'Expenses', title: 'Planner · Income & expenses', sub: T, head: ['Category', 'Amount', 'Essential'], rows: [['Monthly income', @json((float) ($incomeExpense->monthly_income ?? 0)), ''], @foreach(($expenses ?? []) as $e)[@json($e->label), @json((float) $e->amount), @json($e->is_essential ? 'Yes' : 'No')], @endforeach] });
+        S.push({ name: 'Retirement', title: 'Planner · Retirement inputs', sub: T, head: ['Field', 'Value'], rows: [['Retire at', @json($retirement->retirement_age ?? '')], ['Life expectancy', @json($retirement->life_expectancy ?? '')], ['Monthly spending', @json((float) ($retirement->monthly_spending ?? 0))], ['Other income', @json((float) ($retirement->other_income ?? 0))], ['Inflation %', @json($retirement->inflation_rate ?? '')], ['Return pre %', @json($retirement->return_pre ?? '')], ['Return post %', @json($retirement->return_post ?? '')], ['Current corpus', @json((float) ($retirement->current_corpus ?? 0))], ['Monthly SIP', @json((float) ($retirement->monthly_sip ?? 0))], ['Step-up %', @json($retirement->step_up_percent ?? '')]] });
+        @php
+          $goalFamilyRows = [];
+
+          foreach (($goals ?? []) as $g) {
+            $goalFamilyRows[] = [
+              'Goal',
+              $g->name,
+              (float) ($g->cost_today ?? 0),
+              $g->target_age ?? '',
+            ];
+          }
+
+          foreach (($family ?? []) as $f) {
+            $goalFamilyRows[] = [
+              'Family',
+              $f->name,
+              $f->rel ?? '',
+              $f->age ?? '',
+            ];
+          }
+        @endphp
+        S.push({ name: 'Tools', title: 'Calculators & tools used', sub: T, head: ['Tool', 'When', 'Details'], rows: [@foreach(($toolUsages ?? []) as $t)[@json($t->tool), @json($t->used_at ? \Illuminate\Support\Carbon::parse($t->used_at)->format('d M Y, H:i') : ($t->created_at ? \Illuminate\Support\Carbon::parse($t->created_at)->format('d M Y, H:i') : '')), @json($t->summary ?: ($t->inputs ? json_encode($t->inputs, JSON_UNESCAPED_UNICODE) : ''))], @endforeach] });
+        @if(!empty($portfolio))
+          @php
+            $portfolioRows = collect(is_array($portfolio) ? $portfolio : [])
+              ->map(function ($v, $k) {
+                return [
+                  is_string($k)
+                  ? ucwords(str_replace(['_', '-'], ' ', $k))
+                  : (string) $k,
+                  is_scalar($v) || is_null($v)
+                  ? ($v ?? '')
+                  : json_encode($v, JSON_UNESCAPED_UNICODE),
+                ];
+              })
+              ->values()
+              ->all();
+          @endphp
+
+          S.push({
+            name: 'Portfolio',
+            title: 'Stock portfolio analysis',
+            sub: T,
+            head: ['Field', 'Value'],
+            rows: @json($portfolioRows)
+          });
+        @endif
         S.push({ name: 'Notes', title: 'Notes', sub: T, head: ['Author', 'Note', 'When'], rows: [@foreach(($notes ?? []) as $n)[@json($n->author), @json($n->note), @json(\Illuminate\Support\Carbon::parse($n->created_at)->format('d M Y, H:i'))], @endforeach] });
         S.push({ name: 'Activity', title: 'Activity / Leads', sub: T, head: ['Event', 'Mobile', 'Email', 'IP', 'When'], rows: [@foreach(($leads ?? []) as $l)[@json($l->event), @json($l->mobile ?? ''), @json($l->email ?? ''), @json($l->ip ?? ''), @json(\Illuminate\Support\Carbon::parse($l->created_at)->format('d M Y, H:i'))], @endforeach] });
         S.push({ name: 'Wallet ledger', title: 'Wallet & points ledger', sub: T, head: ['Account', 'Type', 'Points', 'Note', 'When'], rows: [@foreach(($ledger ?? []) as $x)[@json($x->account), @json($x->type), @json((int) $x->points), @json($x->note ?? ''), @json(\Illuminate\Support\Carbon::parse($x->created_at)->format('d M Y, H:i'))], @endforeach] });
