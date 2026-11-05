@@ -1354,6 +1354,13 @@
             ];
           }
         @endphp
+        S.push({
+          name: 'Goals & family',
+          title: 'Planner · Goals & family',
+          sub: T,
+          head: ['Type', 'Name', 'Detail 1', 'Detail 2'],
+          rows: @json($goalFamilyRows)
+        });
         S.push({ name: 'Tools', title: 'Calculators & tools used', sub: T, head: ['Tool', 'When', 'Details'], rows: [@foreach(($toolUsages ?? []) as $t)[@json($t->tool), @json($t->used_at ? \Illuminate\Support\Carbon::parse($t->used_at)->format('d M Y, H:i') : ($t->created_at ? \Illuminate\Support\Carbon::parse($t->created_at)->format('d M Y, H:i') : '')), @json($t->summary ?: ($t->inputs ? json_encode($t->inputs, JSON_UNESCAPED_UNICODE) : ''))], @endforeach] });
         @if(!empty($portfolio))
           @php
