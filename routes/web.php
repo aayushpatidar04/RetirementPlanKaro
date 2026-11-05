@@ -124,6 +124,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('leads', [AdminLeadController::class, 'index'])->name('leads');
         Route::get('payments', [AdminPaymentController::class, 'index'])->name('payments');
         Route::get('sessions', [AdminSessionController::class, 'index'])->name('sessions');
+        Route::post('sessions/availability', [AdminSessionController::class, 'saveAvailability'])->name('sessions.availability');
+        Route::post('sessions/{id}', [AdminSessionController::class, 'update'])->name('sessions.update');
         Route::post('sessions/{id}/status', [AdminSessionController::class, 'status'])->name('sessions.status');
         Route::get('coupons', [AdminCouponController::class, 'index'])->name('coupons');
         Route::post('coupons', [AdminCouponController::class, 'store'])->name('coupons.store');
