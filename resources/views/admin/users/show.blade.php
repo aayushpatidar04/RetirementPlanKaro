@@ -442,7 +442,7 @@
       <h3 style="margin:0 0 12px">Edit tags</h3>
       @php $tagsVal = '';
         if (isset($user->tags)) {
-          $tagsVal = is_string($user->tags) ? implode(', ', json_decode($user->tags, true) ?: []) : (is_array($user->tags) ? implode(', ', $user->tags) : $user->tags);
+          $tagsVal = is_string($user->tags) ? implode(', ', json_decode($user->tags, true) ?? []) : (is_array($user->tags) ? implode(', ', $user->tags) : $user->tags);
       } @endphp
       <div class="fg" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <label class="w" style="grid-column:1/-1">Tags (comma separated)<input name="tags" value="{{ $tagsVal }}"></label>
@@ -451,7 +451,7 @@
             @php $st = $user->stage ?? '';
             $opts = ['', 'Signed up', 'Payment failed', 'Paid report', 'Session booked', 'Hot lead', 'Lost']; @endphp
             @foreach($opts as $o)
-            <option value="{{ $o }}" {{ $st === $o ? 'selected' : '' }}>{{ $o ?: '—' }}</option>@endforeach
+            <option value="{{ $o }}" {{ $st === $o ? 'selected' : '' }}>{{ $o ?? '—' }}</option>@endforeach
           </select></label>
       </div>
       <div class="ac" style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
@@ -707,7 +707,7 @@
           <dd>
             @php $tv = [];
               if (isset($user->tags) && $user->tags) {
-                $tv = is_string($user->tags) ? (json_decode($user->tags, true) ?: []) : (is_array($user->tags) ? $user->tags : []);
+                $tv = is_string($user->tags) ? (json_decode($user->tags, true) ?? []) : (is_array($user->tags) ? $user->tags : []);
             } @endphp
             {{ $tv ? implode(', ', $tv) : '—' }}
           </dd>
@@ -1031,10 +1031,10 @@
                   <td>{{ $p->txnid }}</td>
                   <td>{{ $p->purpose }}</td>
                   <td>₹{{ number_format((float)$p->amount, 2) }}</td>
-                  <td>{{ $p->coupon_code ?: '—' }}</td>
+                  <td>{{ $p->coupon_code ?? '—' }}</td>
                   <td>@if($ok)<span class="pill ok">success</span>@elseif($bad)<span class="pill bad">failed</span>@elseif($st==='refunded')<span class="pill warn">refunded</span>@else<span class="pill warn">{{ $st }}</span>@endif</td>
-                  <td>{{ $p->payu_id ?: '—' }}</td>
-                  <td>{{ $p->mode ?: '—' }}</td>
+                  <td>{{ $p->payu_id ?? '—' }}</td>
+                  <td>{{ $p->mode ?? '—' }}</td>
                   <td>{{ $p->paid_at ? \Illuminate\Support\Carbon::parse($p->paid_at)->format('d M Y, H:i') : \Illuminate\Support\Carbon::parse($p->created_at)->format('d M Y, H:i') }}</td>
                   <td>—</td>
                   <td>
@@ -1088,8 +1088,8 @@
             <tbody>
               @foreach($couponRedemptions as $c)
                 <tr>
-                  <td>{{ $c->code ?: '—' }}</td>
-                  <td>{{ $c->txnid ?: '—' }}</td>
+                  <td>{{ $c->code ?? '—' }}</td>
+                  <td>{{ $c->txnid ?? '—' }}</td>
                   <td>₹{{ number_format((float)($c->coupon_off ?? 0), 2) }}</td>
                 </tr>
               @endforeach
@@ -1124,10 +1124,10 @@
                   <td>{{ \Illuminate\Support\Carbon::parse($s->date)->format('d M Y') }}</td>
                   <td>{{ $s->slot }}</td>
                   <td>{{ $s->mode }}</td>
-                  <td style="white-space:normal;max-width:260px">{{ $q ?: '—' }}</td>
-                  <td>{{ $adv ?: '—' }}</td>
+                  <td style="white-space:normal;max-width:260px">{{ $q ?? '—' }}</td>
+                  <td>{{ $adv ?? '—' }}</td>
                   <td>@if($ok)<span class="pill ok">done</span>@elseif($st==='confirmed')<span class="pill warn">confirmed</span>@elseif($bad)<span class="pill bad">cancelled</span>@elseif($st==='pending_payment')<span class="pill warn">pending payment</span>@else<span class="pill warn">{{ $st }}</span>@endif</td>
-                  <td style="white-space:normal;max-width:180px">{{ $s->cancel_reason ?: '—' }}</td>
+                  <td style="white-space:normal;max-width:180px">{{ $s->cancel_reason ?? '—' }}</td>
                   <td><button class="btn s" type="button" onclick="openSessionEdit({{ $s->id }}, @json($s->date), @json($s->slot), @json($s->mode), @json($q), @json($s->advisor ?? ''), @json($st), @json($s->cancel_reason ?? ''))">Edit</button></td>
                 </tr>
               @endforeach
@@ -1158,11 +1158,17 @@
   </dialog>
   <div id="tab-messages" style="display:none">
     <div class="card">
-      <h3>Messages & notes</h3>
-      <div class="em">No messages recorded.</div>
+      <h3>Messages &amp; notes</h3>
+      <div class="em">Messages sent from the composer open WhatsApp/mail clients; server-side message history is not recorded unless logged by an integration.</div>
     </div>
     <div class="card">
       <h3>Notes</h3>
+      <form method="POST" action="{{ route('admin.users.notes.store', $user->id) }}" style="margin-bottom:12px; padding: 5px 10px;">@csrf
+        <div class="fg" style="grid-template-columns:1fr">
+          <label class="w">Add note<textarea class="in" name="note" rows="3" maxlength="2000" required placeholder="Internal note for this client"></textarea></label>
+        </div>
+        <div class="ac" style="margin-top:8px"><button class="btn p s" type="submit">Add note</button></div>
+      </form>
       @if(isset($notes) && $notes->count())
         <div class="tl">
           @foreach($notes as $n)
@@ -1180,15 +1186,52 @@
 
   <div id="tab-activity" style="display:none">
     <div class="card">
-      <h3>Activity log</h3>
+      <h3>Timeline</h3>
       <div class="tl">
-        @forelse($leads as $l)
+        @php
+          $timeline = collect();
+          foreach(($activityLogs ?? collect()) as $a){
+            $timeline->push(['at'=>$a->created_at,'title'=>$a->description ?? $a->event,'meta'=>trim(($a->actor_name ? $a->actor_name.' · ' : '').($a->event ?? '').($a->ip ? ' · '.$a->ip : ''))]);
+          }
+          foreach(($leads ?? collect()) as $l){
+            $timeline->push(['at'=>$l->created_at,'title'=>$l->event,'meta'=>'lead/capture'.($l->ip ? ' · '.$l->ip : '')]);
+          }
+          foreach(($payments ?? collect()) as $p){
+            $timeline->push(['at'=>$p->created_at,'title'=>'Payment '.$p->status.' · '.($p->purpose ?? ''),'meta'=>($p->txnid ?? '').' · ₹'.number_format((float)$p->amount,2)]);
+          }
+          foreach(($sessions ?? collect()) as $s2){
+            $timeline->push(['at'=>$s2->created_at,'title'=>'Session '.$s2->status,'meta'=>($s2->date ?? '').' '.$s2->slot.' · '.($s2->mode ?? '')]);
+          }
+          foreach(($notes ?? collect()) as $n2){
+            $timeline->push(['at'=>$n2->created_at,'title'=>'Note added','meta'=>$n2->author]);
+          }
+          $timeline = $timeline->filter(fn($x)=>!empty($x['at']))->sortByDesc(fn($x)=>strtotime((string)$x['at']))->values()->take(150);
+        @endphp
+        @forelse($timeline as $t)
           <div>
-            <b>{{ $l->event }}</b><small>{{ \Illuminate\Support\Carbon::parse($l->created_at)->format('d M Y, H:i') }}{{ $l->ip ? ' · ' . $l->ip : '' }}</small>
+            <b>{{ $t['title'] }}</b><small>{{ \Illuminate\Support\Carbon::parse($t['at'])->format('d M Y, H:i') }}@if(!empty($t['meta'])) · {{ $t['meta'] }}@endif</small>
           </div>
         @empty
-          <div class="em" style="padding-left:0">No activity.</div>
+          <div class="em" style="padding-left:0">No activity recorded yet. New admin actions will appear here as they are logged.</div>
         @endforelse
+      </div>
+    </div>
+    <div class="card">
+      <h3>Messages sent</h3>
+      <div class="sc"><div class="em">No server-side message history. WhatsApp opens wa.me and email opens the mail client from the composer.</div></div>
+    </div>
+    <div class="card">
+      <h3>Internal notes</h3>
+      <div class="sc">
+        @if(!isset($notes) || $notes->isEmpty())
+          <div class="em">No notes.</div>
+        @else
+          <table><thead><tr><th>By</th><th>Note</th><th>When</th></tr></thead><tbody>
+          @foreach($notes as $n3)
+            <tr><td>{{ $n3->author }}</td><td style="white-space:normal">{{ $n3->note }}</td><td>{{ \Illuminate\Support\Carbon::parse($n3->created_at)->format('d M Y, H:i') }}</td></tr>
+          @endforeach
+          </tbody></table>
+        @endif
       </div>
     </div>
   </div>
@@ -1221,7 +1264,7 @@
                 <tr>
                   <td>{{ $t->tool }}</td>
                   <td>{{ $when }}</td>
-                  <td style="white-space:normal">{{ $details ?: '—' }}</td>
+                  <td style="white-space:normal">{{ $details ?? '—' }}</td>
                 </tr>
               @endforeach
             </tbody>
@@ -1276,7 +1319,7 @@
                   <td>{{ $x->type ?? $x->account ?? '—' }}@if(!empty($x->account)) <small style="color:var(--mut)">({{ $x->account }})</small>@endif</td>
                   <td>{{ (int)$x->points >= 0 ? '+' : '' }}{{ (int)$x->points }}</td>
                   <td>{{ $after }}</td>
-                  <td>{{ $x->note ?: '—' }}</td>
+                  <td>{{ $x->note ?? '—' }}</td>
                   <td>{{ $x->created_at ? \Illuminate\Support\Carbon::parse($x->created_at)->format('d M Y, H:i') : '—' }}</td>
                 </tr>
               @endforeach
@@ -1312,9 +1355,9 @@
     <div class="card">
       <h3>Referral summary</h3>
       <div class="kv">
-        <div><dt>Own referral code</dt><dd>{{ $user->referral_code ?: '—' }}</dd></div>
+        <div><dt>Own referral code</dt><dd>{{ $user->referral_code ?? '—' }}</dd></div>
         <div><dt>Referral link</dt><dd>@if(!empty($referralLink))<a href="{{ $referralLink }}" target="_blank" rel="noopener">{{ $referralLink }}</a>@else — @endif</dd></div>
-        <div><dt>Referred by</dt><dd>{{ $user->referred_by_code ?: '—' }}</dd></div>
+        <div><dt>Referred by</dt><dd>{{ $user->referred_by_code ?? '—' }}</dd></div>
         <div><dt>Total referred</dt><dd>{{ isset($referralsMade) ? $referralsMade->count() : 0 }}</dd></div>
         <div><dt>Points earned (referrals)</dt><dd>{{ $referralPointsEarned ?? 0 }}</dd></div>
         <div><dt>Bonus per referral</dt><dd>{{ $referralBonus ?? 0 }} pts</dd></div>
@@ -1332,11 +1375,11 @@
               @foreach($referralsMade as $r)
                 @php $name = trim(($r->name ?? '').' '.($r->surname ?? '')); @endphp
                 <tr>
-                  <td>{{ $name ?: '—' }}</td>
-                  <td>{{ $r->mobile ?: '—' }}</td>
-                  <td>{{ $r->email ?: '—' }}</td>
+                  <td>{{ $name ?? '—' }}</td>
+                  <td>{{ $r->mobile ?? '—' }}</td>
+                  <td>{{ $r->email ?? '—' }}</td>
                   <td>{{ $r->signup_at ? \Illuminate\Support\Carbon::parse($r->signup_at)->format('d M Y, H:i') : '—' }}</td>
-                  <td><span class="pill info">{{ $r->stage ?: 'Signed up' }}</span></td>
+                  <td><span class="pill info">{{ $r->stage ?? 'Signed up' }}</span></td>
                   <td>@if(!empty($r->email_verified_at))<span class="pill ok">Yes</span>@else<span class="pill bad">No</span>@endif</td>
                   <td>@if($r->credited){{ $referralBonus ?? 0 }} pts @else <span class="pill warn">Pending</span> @endif</td>
                 </tr>
@@ -1515,7 +1558,7 @@
           head: ['Type', 'Name', 'Detail 1', 'Detail 2'],
           rows: @json($goalFamilyRows)
         });
-        S.push({ name: 'Tools', title: 'Calculators & tools used', sub: T, head: ['Tool', 'When', 'Details'], rows: [@foreach(($toolUsages ?? []) as $t)[@json($t->tool), @json($t->used_at ? \Illuminate\Support\Carbon::parse($t->used_at)->format('d M Y, H:i') : ($t->created_at ? \Illuminate\Support\Carbon::parse($t->created_at)->format('d M Y, H:i') : '')), @json($t->summary ?: ($t->inputs ? json_encode($t->inputs, JSON_UNESCAPED_UNICODE) : ''))], @endforeach] });
+        S.push({ name: 'Tools', title: 'Calculators & tools used', sub: T, head: ['Tool', 'When', 'Details'], rows: [@foreach(($toolUsages ?? []) as $t)[@json($t->tool), @json($t->used_at ? \Illuminate\Support\Carbon::parse($t->used_at)->format('d M Y, H:i') : ($t->created_at ? \Illuminate\Support\Carbon::parse($t->created_at)->format('d M Y, H:i') : '')), @json($t->summary ?? ($t->inputs ? json_encode($t->inputs, JSON_UNESCAPED_UNICODE) : ''))], @endforeach] });
         @if(!empty($portfolio))
           @php
             $portfolioRows = collect(is_array($portfolio) ? $portfolio : [])

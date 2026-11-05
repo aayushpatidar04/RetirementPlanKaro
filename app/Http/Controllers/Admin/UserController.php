@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Models\User;
 use App\Http\Controllers\Controller;
+use App\Support\Activity;
 use App\Support\Settings;
+use App\Traits\RecordsActivity;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -12,6 +14,7 @@ use Illuminate\View\View;
 
 class UserController extends Controller
 {
+    use RecordsActivity;
     public function index(Request $request): View
     {
         $q = trim((string) $request->query('q', ''));
@@ -78,11 +81,17 @@ class UserController extends Controller
         $walletUnlocks = DB::table('wallet_unlocks')->where('user_id', $id)->orderByDesc('expires_at')->orderByDesc('id')->get();
         $userStreak = DB::table('user_streaks')->where('user_id', $id)->first();
         $latestWalletUnlock = $walletUnlocks->first();
+        $activityLogs = collect();
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('activity_logs')) {
+                $activityLogs = DB::table('activity_logs')->where('user_id', $id)->orderByDesc('id')->limit(120)->get();
+            }
+        } catch (\Throwable $e) {}
 
         return view('admin.users.show', compact(
             'user','payments','sessions','leads','blobs','reportPts','walletPts','ledger','notes',
             'netWorth','assets','liabilities','incomeExpense','expenses','protection','retirement','goals','family','swp',
-            'toolUsages','portfolio','premiumReports','couponRedemptions','referralsMade','referralBonus','referralLink','referralPointsEarned','walletUnlocks','userStreak','latestWalletUnlock'
+            'toolUsages','portfolio','premiumReports','couponRedemptions','referralsMade','referralBonus','referralLink','referralPointsEarned','walletUnlocks','userStreak','latestWalletUnlock','activityLogs'
         ));
     }
 
@@ -97,6 +106,7 @@ class UserController extends Controller
             'pan' => 'nullable|string|max:10',
         ]);
         DB::table('users')->where('id', $id)->update(array_merge($data, ['updated_at' => now()]));
+        $this->recordActivity($id, 'client.profile_updated', 'Client profile updated', ['fields' => array_keys($data)], 'User', $id);
         return redirect()->route('admin.users.show', $id)->with('ok', 'Client profile updated.');
     }
 
@@ -114,6 +124,7 @@ class UserController extends Controller
             'stage' => $data['stage'] ?? null,
             'updated_at' => now(),
         ]);
+        $this->recordActivity($id, 'client.tags_updated', 'Tags/stage/assignment updated', ['stage' => $data['stage'] ?? null, 'assigned_to' => $data['assigned_to'] ?? null, 'tags' => $tags], 'User', $id);
         return redirect()->route('admin.users.show', $id)->with('ok', 'Tags updated.');
     }
 
@@ -130,7 +141,7 @@ class UserController extends Controller
                 $essential = false;
                 if ($type === 'expense' && str_ends_with($line, '*')) { $essential = true; $line = trim(substr($line, 0, -1)); }
                 $parts = preg_split('/\s*[=:]\s*/', $line, 2);
-                $label = trim($parts[0] ?? 'Other') ?: 'Other';
+                $label = trim($parts[0] ?? 'Other') ?? 'Other';
                 $val = isset($parts[1]) ? (float) preg_replace('/[^\d.\-]/', '', $parts[1]) : 0;
                 $rows[] = ['label' => $label, 'amount' => $val, 'essential' => $essential];
             }
@@ -140,9 +151,9 @@ class UserController extends Controller
             $rows = [];
             foreach (preg_split('/\r?\n/', (string) $txt) as $line) {
                 $line = trim($line); if ($line === '') continue;
-                $age = 0; if (preg_match('/@\s*(\d+(?:\.\d+)?)/', $line, $m)) { $age = (float) $m[1]; $line = trim(preg_replace('/@\s*\d+(?:\.\d+)?/', '', $line)); }
+                $age = 0; if (preg_match('/@\s*(\d+(??\.\d+)?)/', $line, $m)) { $age = (float) $m[1]; $line = trim(preg_replace('/@\s*\d+(??\.\d+)?/', '', $line)); }
                 $parts = preg_split('/\s*[=:]\s*/', $line, 2);
-                $name = trim($parts[0] ?? 'Goal') ?: 'Goal';
+                $name = trim($parts[0] ?? 'Goal') ?? 'Goal';
                 $cost = isset($parts[1]) ? (float) preg_replace('/[^\d.\-]/', '', $parts[1]) : 0;
                 $rows[] = ['name' => $name, 'cost_today' => $cost, 'target_age' => $age];
             }
@@ -153,14 +164,14 @@ class UserController extends Controller
             foreach (preg_split('/\r?\n/', (string) $txt) as $line) {
                 $line = trim($line); if ($line === '') continue;
                 $parts = array_map('trim', explode('|', $line));
-                $rows[] = ['name' => $parts[0] ?: 'Member', 'rel' => $parts[1] ?? '', 'age' => isset($parts[2]) ? (float) preg_replace('/[^\d.\-]/', '', $parts[2]) : 0];
+                $rows[] = ['name' => $parts[0] ?? 'Member', 'rel' => $parts[1] ?? '', 'age' => isset($parts[2]) ? (float) preg_replace('/[^\d.\-]/', '', $parts[2]) : 0];
             }
             return $rows;
         };
 
         $uid = $id;
         DB::transaction(function () use ($request, $uid, $now, $parseList, $parseGoals, $parseFamily, $num, $amt) {
-            $nw = ['age' => $num($request->input('nw_age')), 'country' => $request->string('nw_country')->trim() ?: 'IN', 'updated_at' => $now];
+            $nw = ['age' => $num($request->input('nw_age')), 'country' => $request->string('nw_country')->trim() ?? 'IN', 'updated_at' => $now];
             if (DB::table('net_worths')->where('user_id', $uid)->exists()) DB::table('net_worths')->where('user_id', $uid)->update($nw);
             else DB::table('net_worths')->insert($nw + ['user_id' => $uid, 'created_at' => $now]);
 
@@ -177,17 +188,17 @@ class UserController extends Controller
             foreach ($parseList($request->input('expenses'), 'expense') as $r) DB::table('expenses')->insert(['user_id'=>$uid,'slot'=>null,'label'=>$r['label'],'amount'=>$r['amount'],'is_essential'=>$r['essential'],'created_at'=>$now,'updated_at'=>$now]);
 
             $prot = [
-                'life_insurance'=>$request->string('life_insurance')->trim()?:'No','life_cover'=>$amt($request->input('life_cover')),
+                'life_insurance'=>$request->string('life_insurance')->trim()??'No','life_cover'=>$amt($request->input('life_cover')),
                 'term_premium'=>$amt($request->input('term_premium')),'term_till_age'=>$amt($request->input('term_till_age')),
-                'health_type'=>$request->string('health_type')->trim()?:'None','health_cover'=>$amt($request->input('health_cover')),
-                'health_premium'=>$amt($request->input('health_premium')),'health_topup'=>$request->string('health_topup')->trim()?:'No',
-                'emergency_fund'=>$amt($request->input('emergency_fund')),'emergency_where'=>$request->string('emergency_where')->trim()?:'Savings account','updated_at'=>$now,
+                'health_type'=>$request->string('health_type')->trim()??'None','health_cover'=>$amt($request->input('health_cover')),
+                'health_premium'=>$amt($request->input('health_premium')),'health_topup'=>$request->string('health_topup')->trim()??'No',
+                'emergency_fund'=>$amt($request->input('emergency_fund')),'emergency_where'=>$request->string('emergency_where')->trim()??'Savings account','updated_at'=>$now,
             ];
             if (DB::table('protections')->where('user_id', $uid)->exists()) DB::table('protections')->where('user_id', $uid)->update($prot);
             else DB::table('protections')->insert($prot + ['user_id'=>$uid,'created_at'=>$now]);
 
             $rp = [
-                'retirement_age'=>$amt($request->input('retirement_age'))?:60,'life_expectancy'=>$amt($request->input('life_expectancy'))?:90,
+                'retirement_age'=>$amt($request->input('retirement_age'))??60,'life_expectancy'=>$amt($request->input('life_expectancy'))??90,
                 'monthly_spending'=>$amt($request->input('monthly_spending')),'other_income'=>$amt($request->input('other_income')),
                 'inflation_rate'=>$amt($request->input('inflation_rate')),'return_pre'=>$amt($request->input('return_pre')),'return_post'=>$amt($request->input('return_post')),
                 'current_corpus'=>$amt($request->input('current_corpus')),'monthly_sip'=>$amt($request->input('monthly_sip')),'step_up_percent'=>$amt($request->input('step_up_percent')),
@@ -202,11 +213,12 @@ class UserController extends Controller
             DB::table('family_members')->where('user_id', $uid)->delete();
             foreach ($parseFamily($request->input('family')) as $f) DB::table('family_members')->insert(['user_id'=>$uid,'name'=>$f['name'],'rel'=>$f['rel'],'age'=>$f['age'],'created_at'=>$now,'updated_at'=>$now]);
 
-            $swp = ['mode'=>$request->string('swp_mode')->trim()?:'mine','show_filter'=>$request->string('swp_show_filter')->trim()?:'all','updated_at'=>$now];
+            $swp = ['mode'=>$request->string('swp_mode')->trim()??'mine','show_filter'=>$request->string('swp_show_filter')->trim()??'all','updated_at'=>$now];
             if (DB::table('swp_settings')->where('user_id', $uid)->exists()) DB::table('swp_settings')->where('user_id', $uid)->update($swp);
             else DB::table('swp_settings')->insert($swp + ['user_id'=>$uid,'created_at'=>$now]);
         });
 
+        $this->recordActivity($id, 'client.planner_updated', 'Planner inputs updated by admin', [], 'User', $id);
         return redirect()->route('admin.users.show', $id)->with('ok', 'Planner inputs updated.');
     
     }
@@ -218,6 +230,7 @@ class UserController extends Controller
         $user->status = $suspended ? 'Active' : 'Blocked';
         $user->suspended_at = $suspended ? null : now();
         $user->save();
+        $this->recordActivity($id, $suspended ? 'client.reinstated' : 'client.suspended', $suspended ? 'Account reinstated' : 'Account suspended', ['status' => $user->status], 'User', $id);
         return redirect()->route('admin.users.show', $id)->with('ok', $suspended ? 'Account reinstated.' : 'Account suspended.');
     }
 
@@ -228,6 +241,7 @@ class UserController extends Controller
         if ($data['status'] === 'success') $upd['paid_at'] = now();
         DB::table('payments')->where('id', $paymentId)->where('user_id', $id)->update($upd);
         $labels = ['success' => 'Marked as received.', 'refunded' => 'Recorded as refunded.', 'failed' => 'Marked as failed.', 'pending' => 'Marked as pending.'];
+        $this->recordActivity($id, 'payment.status_updated', $labels[$data['status']] ?? 'Payment updated', ['payment_id'=>$paymentId,'status'=>$data['status']], 'Payment', $paymentId);
         return redirect()->route('admin.users.show', $id)->with('ok', $labels[$data['status']] ?? 'Payment updated.');
     }
 
@@ -243,9 +257,9 @@ class UserController extends Controller
             'cancel_reason' => 'nullable|string|max:300',
         ]);
         $upd = [
-            'date' => $data['date'] ?: now()->toDateString(),
-            'slot' => $data['slot'] ?: '—',
-            'mode' => $data['mode'] ?: 'Call',
+            'date' => $data['date'] ?? now()->toDateString(),
+            'slot' => $data['slot'] ?? '—',
+            'mode' => $data['mode'] ?? 'Call',
             'question' => $data['question'] ?? null,
             'note' => $data['question'] ?? null,
             'advisor' => $data['advisor'] ?? null,
@@ -254,7 +268,49 @@ class UserController extends Controller
             'updated_at' => now(),
         ];
         DB::table('guidance_sessions')->where('id', $sessionId)->where('user_id', $id)->update($upd);
+        $this->recordActivity($id, 'session.updated', 'Guidance session updated', ['session_id'=>$sessionId,'status'=>$data['status']], 'GuidanceSession', $sessionId);
         return redirect()->route('admin.users.show', $id)->with('ok', 'Session updated.');
     }
-}
 
+
+    public function adjustPoints(Request $request, int $id): RedirectResponse
+    {
+        User::findOrFail($id);
+        $data = $request->validate([
+            'account' => 'required|string|in:report,wallet,Wallet (₹),Points',
+            'points' => 'required|integer|not_in:0',
+            'note' => 'nullable|string|max:120',
+        ]);
+        $account = in_array($data['account'], ['wallet', 'Wallet (₹)'], true) ? 'wallet' : 'report';
+        DB::table('points_ledger')->insert([
+            'user_id' => $id,
+            'account' => $account,
+            'type' => 'admin_adjustment',
+            'points' => (int) $data['points'],
+            'note' => $data['note'] ?? 'Admin adjustment',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $this->recordActivity($id, 'points.adjusted', 'Points/wallet adjusted', ['account'=>$account,'points'=>(int)$data['points'],'note'=>$data['note'] ?? null], 'User', $id);
+        return redirect()->route('admin.users.show', $id)->with('ok', 'Points/wallet updated.');
+    }
+
+    public function storeNote(Request $request, int $id): RedirectResponse
+    {
+        User::findOrFail($id);
+        $data = $request->validate(['note' => 'required|string|max:2000', 'author' => 'nullable|string|max:100']);
+        $admin = null;
+        try { $admin = \Illuminate\Support\Facades\Auth::guard('admin')->user(); } catch (\Throwable $e) {}
+        $author = $data['author'] ?? ($admin->name ?? ($admin->email ?? 'Admin'));
+        DB::table('client_notes')->insert([
+            'user_id' => $id,
+            'author' => $author,
+            'note' => $data['note'],
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $this->recordActivity($id, 'note.added', 'Internal note added', ['author'=>$author], 'ClientNote', null);
+        return redirect()->route('admin.users.show', $id)->with('ok', 'Note added.');
+    }
+
+}
