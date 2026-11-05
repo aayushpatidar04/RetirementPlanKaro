@@ -350,14 +350,36 @@
       <details class="dd">
         <summary class="btn">More ▾</summary>
         <div class="ddm">
-          <button class="mi">Edit client profile</button>
+          <button type="button" class="mi" onclick="document.getElementById('editClient').showModal(); this.closest('details').open=false;">Edit client profile</button>
           <button class="mi">Adjust points / wallet</button>
           <button class="mi">Add note</button>
           <button class="mi">Edit tags</button>
           <button class="mi">Export client report</button>
-          <button
-            class="mi d">{{ !empty($user->status) && $user->status === 'Blocked' ? 'Reinstate account' : 'Suspend account' }}</button>
+          <button class="mi d">{{ !empty($user->status) && $user->status==='Blocked' ? 'Reinstate account' : 'Suspend account' }}</button>
         </div>
+      </details>
+    </div>
+  </div>
+
+  <dialog id="editClient" style="border:0;padding:0;background:transparent">
+    <form method="POST" action="{{ route('admin.users.update', $user->id) }}" class="mo" style="width:min(560px,100%);background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;display:block">
+      @csrf
+      @method('PUT')
+      <h3 style="margin:0 0 12px">Edit client profile</h3>
+      <div class="fg" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <label>First name<input name="name" value="{{ $user->name ?? '' }}" required></label>
+        <label>Surname<input name="surname" value="{{ $user->surname ?? '' }}"></label>
+        <label>Mobile<input name="mobile" value="{{ $user->mobile ?? '' }}" required></label>
+        <label>Email<input name="email" type="email" value="{{ $user->email ?? '' }}" required></label>
+        <label>City<input name="city" value="{{ $user->city ?? '' }}"></label>
+        <label>PAN<input name="pan" value="{{ $user->pan ?? '' }}" maxlength="10"></label>
+      </div>
+      <div class="ac" style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+        <button type="button" class="btn" onclick="document.getElementById('editClient').close()">Cancel</button>
+        <button type="submit" class="btn p">Save</button>
+      </div>
+    </form>
+  </dialog>
       </details>
     </div>
   </div>
