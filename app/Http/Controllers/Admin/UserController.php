@@ -83,7 +83,19 @@ class UserController extends Controller
         ));
     }
 
-
+    public function update(Request $request, int $id): RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => 'required|string|max:100',
+            'surname' => 'nullable|string|max:100',
+            'mobile' => 'required|string|max:15',
+            'email' => 'required|email|max:255',
+            'city' => 'nullable|string|max:100',
+            'pan' => 'nullable|string|max:10',
+        ]);
+        DB::table('users')->where('id', $id)->update(array_merge($data, ['updated_at' => now()]));
+        return redirect()->route('admin.users.show', $id)->with('ok', 'Client profile updated.');
+    }
 
     public function updateTags(Request $request, int $id): RedirectResponse
     {
