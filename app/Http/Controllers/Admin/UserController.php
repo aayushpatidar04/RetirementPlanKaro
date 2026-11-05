@@ -205,5 +205,31 @@ class UserController extends Controller
         $labels = ['success' => 'Marked as received.', 'refunded' => 'Recorded as refunded.', 'failed' => 'Marked as failed.', 'pending' => 'Marked as pending.'];
         return redirect()->route('admin.users.show', $id)->with('ok', $labels[$data['status']] ?? 'Payment updated.');
     }
+
+    public function updateSession(Request $request, int $id, int $sessionId)
+    {
+        $data = $request->validate([
+            'date' => 'nullable|date',
+            'slot' => 'nullable|string|max:40',
+            'mode' => 'nullable|string|max:20',
+            'question' => 'nullable|string|max:500',
+            'advisor' => 'nullable|string|max:120',
+            'status' => 'required|in:pending_payment,confirmed,done,cancelled',
+            'cancel_reason' => 'nullable|string|max:300',
+        ]);
+        $upd = [
+            'date' => $data['date'] ?: now()->toDateString(),
+            'slot' => $data['slot'] ?: '—',
+            'mode' => $data['mode'] ?: 'Call',
+            'question' => $data['question'] ?? null,
+            'note' => $data['question'] ?? null,
+            'advisor' => $data['advisor'] ?? null,
+            'status' => $data['status'],
+            'cancel_reason' => $data['status'] === 'cancelled' ? ($data['cancel_reason'] ?? null) : null,
+            'updated_at' => now(),
+        ];
+        DB::table('guidance_sessions')->where('id', $sessionId)->where('user_id', $id)->update($upd);
+        return redirect()->route('admin.users.show', $id)->with('ok', 'Session updated.');
+    }
 }
 

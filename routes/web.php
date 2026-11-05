@@ -115,6 +115,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::put('users/{id}/tags', [AdminUserController::class, 'updateTags'])->name('users.tags.update');
         Route::put('users/{id}/planner', [AdminUserController::class, 'updatePlanner'])->name('users.planner.update');
         Route::post('users/{id}/payments/{paymentId}/status', [AdminUserController::class, 'updatePaymentStatus'])->name('users.payments.status');
+        Route::post('users/{id}/sessions/{sessionId}', [AdminUserController::class, 'updateSession'])->name('users.sessions.update');
         Route::post('users/{id}/suspend', [AdminUserController::class, 'toggleSuspend'])->name('users.suspend');
 
 

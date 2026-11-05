@@ -1102,31 +1102,34 @@
   </div>
   <div id="tab-sessions" style="display:none">
     <div class="card">
-      <h3>Sessions</h3>
+      <h3>Guidance sessions</h3>
       <div class="sc">
         @if($sessions->isEmpty())
-          <div class="em">No sessions.</div>
+          <div class="em">No sessions booked.</div>
         @else
           <table>
             <thead>
               <tr>
-                <th>Date</th>
-                <th>Slot</th>
-                <th>Mode</th>
-                <th>Mobile</th>
-                <th>Status</th>
-                <th>Note</th>
+                <th>Date</th><th>Slot</th><th>Mode</th><th>Question</th><th>Advisor</th><th>Status</th><th>Cancel reason</th><th>Action</th>
               </tr>
             </thead>
             <tbody>
               @foreach($sessions as $s)
+                @php
+                  $q = $s->question ?? $s->note ?? '';
+                  $adv = $s->advisor ?? '—';
+                  $st = $s->status;
+                  $ok = $st === 'done'; $bad = $st === 'cancelled';
+                @endphp
                 <tr>
-                  <td>{{ $s->date }}</td>
+                  <td>{{ \Illuminate\Support\Carbon::parse($s->date)->format('d M Y') }}</td>
                   <td>{{ $s->slot }}</td>
                   <td>{{ $s->mode }}</td>
-                  <td>{{ $s->mobile }}</td>
-                  <td>{{ $s->status }}</td>
-                  <td>{{ $s->note ?? '—' }}</td>
+                  <td style="white-space:normal;max-width:260px">{{ $q ?: '—' }}</td>
+                  <td>{{ $adv ?: '—' }}</td>
+                  <td>@if($ok)<span class="pill ok">done</span>@elseif($st==='confirmed')<span class="pill warn">confirmed</span>@elseif($bad)<span class="pill bad">cancelled</span>@elseif($st==='pending_payment')<span class="pill warn">pending payment</span>@else<span class="pill warn">{{ $st }}</span>@endif</td>
+                  <td style="white-space:normal;max-width:180px">{{ $s->cancel_reason ?: '—' }}</td>
+                  <td><button class="btn s" type="button" onclick="openSessionEdit({{ $s->id }}, @json($s->date), @json($s->slot), @json($s->mode), @json($q), @json($s->advisor ?? ''), @json($st), @json($s->cancel_reason ?? ''))">Edit</button></td>
                 </tr>
               @endforeach
             </tbody>
@@ -1136,6 +1139,24 @@
     </div>
   </div>
 
+  <dialog id="editSession" style="border:0;border-radius:14px;padding:0;max-width:620px;width:96%;box-shadow:0 18px 50px rgba(15,23,42,.18)">
+    <form id="editSessionForm" method="POST" style="padding:18px 18px 14px">
+      @csrf
+      <h3 style="margin:0 0 12px">Edit session</h3>
+      <div class="fg">
+        <label>Date<input class="in" id="es_date" name="date" type="date"></label>
+        <label>Slot<input class="in" id="es_slot" name="slot" maxlength="40"></label>
+        <label>Mode<input class="in" id="es_mode" name="mode" maxlength="20" placeholder="Call / Video / WhatsApp"></label>
+        <label>Advisor<input class="in" id="es_advisor" name="advisor" maxlength="120"></label>
+        <label>Status<select class="in" id="es_status" name="status">
+          <option value="pending_payment">pending_payment</option><option value="confirmed">confirmed</option><option value="done">done</option><option value="cancelled">cancelled</option>
+        </select></label>
+        <label class="w">Question<textarea class="in" id="es_question" name="question" rows="3" maxlength="500"></textarea></label>
+        <label class="w">Cancel reason<input class="in" id="es_cancel" name="cancel_reason" maxlength="300" placeholder="Required context when cancelled"></label>
+      </div>
+      <div class="ac"><button class="btn" type="button" onclick="document.getElementById('editSession').close()">Cancel</button><button class="btn p" type="submit">Save</button></div>
+    </form>
+  </dialog>
   <div id="tab-messages" style="display:none">
     <div class="card">
       <h3>Messages & notes</h3>
@@ -1337,6 +1358,18 @@
         $('chelp').textContent = raw ? 'Template edit mode · variables: {name} {link} {amount} {purpose} {date} {n} {names} {pts}' : 'Preview · personalised for this client';
         $('ce').textContent = raw ? 'Save template' : 'Edit template';
       }
+      window.openSessionEdit = function(id, date, slot, mode, question, advisor, status, cancelReason){
+        var f = document.getElementById('editSessionForm');
+        f.action = @json(url('/admin/users/'.$user->id.'/sessions')) + '/' + id;
+        document.getElementById('es_date').value = (date||'').slice(0,10);
+        document.getElementById('es_slot').value = slot||'';
+        document.getElementById('es_mode').value = mode||'';
+        document.getElementById('es_question').value = question||'';
+        document.getElementById('es_advisor').value = advisor||'';
+        document.getElementById('es_status').value = status||'pending_payment';
+        document.getElementById('es_cancel').value = cancelReason||'';
+        document.getElementById('editSession').showModal();
+      };
       window.oc = function (c) { ch = c || 'wa'; k = L()[0] ? L()[0][1] : 0; raw = false; draw(); ov.classList.add('o'); };
       $('fc').onclick = function () { ov.classList.remove('o'); };
       $('ctsel').onchange = function () { k = +this.value; raw = false; draw(); };
