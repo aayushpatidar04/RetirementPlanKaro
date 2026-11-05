@@ -75,11 +75,14 @@ class UserController extends Controller
         $referralBonus = (int) (class_exists(Settings::class) ? Settings::get('referral_bonus', Settings::get('ref_pts', 100)) : 100);
         $referralLink = !empty($user->referral_code) ? rtrim(url('/'), '/').'?ref='.$user->referral_code : null;
         $referralPointsEarned = $referralsMade->where('credited', true)->count() * $referralBonus;
+        $walletUnlocks = DB::table('wallet_unlocks')->where('user_id', $id)->orderByDesc('expires_at')->orderByDesc('id')->get();
+        $userStreak = DB::table('user_streaks')->where('user_id', $id)->first();
+        $latestWalletUnlock = $walletUnlocks->first();
 
         return view('admin.users.show', compact(
             'user','payments','sessions','leads','blobs','reportPts','walletPts','ledger','notes',
             'netWorth','assets','liabilities','incomeExpense','expenses','protection','retirement','goals','family','swp',
-            'toolUsages','portfolio','premiumReports','couponRedemptions','referralsMade','referralBonus','referralLink','referralPointsEarned'
+            'toolUsages','portfolio','premiumReports','couponRedemptions','referralsMade','referralBonus','referralLink','referralPointsEarned','walletUnlocks','userStreak','latestWalletUnlock'
         ));
     }
 

@@ -574,6 +574,7 @@
     <button data-tab="tools">Tools</button>
     <button data-tab="payments">Payments</button>
     <button data-tab="sessions">Sessions</button>
+    <button data-tab="wallet">Wallet &amp; points</button>
     <button data-tab="referrals">Referrals</button>
     <button data-tab="messages">Messages & notes</button>
     <button data-tab="activity">Activity log</button>
@@ -1249,6 +1250,64 @@
     </div>
   </div>
 
+  <div id="tab-wallet" style="display:none">
+    <div class="card">
+      <h3>Balance</h3>
+      <div class="kv">
+        <div><dt>Points balance (report)</dt><dd>{{ $reportPts ?? 0 }}</dd></div>
+        <div><dt>Wallet balance (points)</dt><dd>{{ $walletPts ?? 0 }}</dd></div>
+        <div><dt>Current streak</dt><dd>{{ isset($userStreak) && $userStreak ? (($userStreak->day ?? 0).' day(s)') : '—' }}</dd></div>
+        <div><dt>Wallet unlocked till</dt><dd>{{ isset($latestWalletUnlock) && $latestWalletUnlock && $latestWalletUnlock->expires_at ? \Illuminate\Support\Carbon::parse($latestWalletUnlock->expires_at)->format('d M Y, h:i A') : '—' }}</dd></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Ledger</h3>
+      <div class="sc">
+        @if(!isset($ledger) || $ledger->isEmpty())
+          <div class="em">No transactions.</div>
+        @else
+          <table>
+            <thead><tr><th>Type</th><th>Points</th><th>Balance after</th><th>Reason</th><th>When</th></tr></thead>
+            <tbody>
+              @php $running = (int)(($reportPts ?? 0) + ($walletPts ?? 0)); @endphp
+              @foreach($ledger as $x)
+                @php $after = $running; $running -= (int)($x->points ?? 0); @endphp
+                <tr>
+                  <td>{{ $x->type ?? $x->account ?? '—' }}@if(!empty($x->account)) <small style="color:var(--mut)">({{ $x->account }})</small>@endif</td>
+                  <td>{{ (int)$x->points >= 0 ? '+' : '' }}{{ (int)$x->points }}</td>
+                  <td>{{ $after }}</td>
+                  <td>{{ $x->note ?: '—' }}</td>
+                  <td>{{ $x->created_at ? \Illuminate\Support\Carbon::parse($x->created_at)->format('d M Y, H:i') : '—' }}</td>
+                </tr>
+              @endforeach
+            </tbody>
+          </table>
+        @endif
+      </div>
+    </div>
+    <div class="card">
+      <h3>Wallet unlocks</h3>
+      <div class="sc">
+        @if(!isset($walletUnlocks) || $walletUnlocks->isEmpty())
+          <div class="em">No wallet unlocks.</div>
+        @else
+          <table>
+            <thead><tr><th>Option</th><th>Unlocked at</th><th>Expires at</th></tr></thead>
+            <tbody>
+              @foreach($walletUnlocks as $w)
+                <tr>
+                  <td>{{ $w->option_key ?? '—' }}</td>
+                  <td>{{ $w->unlocked_at ? \Illuminate\Support\Carbon::parse($w->unlocked_at)->format('d M Y, H:i') : '—' }}</td>
+                  <td>{{ $w->expires_at ? \Illuminate\Support\Carbon::parse($w->expires_at)->format('d M Y, H:i') : '—' }}</td>
+                </tr>
+              @endforeach
+            </tbody>
+          </table>
+        @endif
+      </div>
+    </div>
+  </div>
+
   <div id="tab-referrals" style="display:none">
     <div class="card">
       <h3>Referral summary</h3>
@@ -1382,7 +1441,7 @@
       $('ce').onclick = function () { if (raw) { CT[k].t = $('ctext').value; raw = false; alert('Template saved'); draw(); return; } raw = true; draw(); };
       $('cn').onclick = function () { const n = prompt('Template Name'); if (!n) return; CT.push({ n, t: 'Hi {name}, ' }); k = CT.length - 1; raw = true; draw(); };
       $('ws').onclick = function () { if (raw) { alert('Click Save template first'); return; } if (ch === 'wa') { const num = (U.mobile || '').replace(/\D/g, '').slice(-10); if (num.length < 10) { alert('Enter correct mobile number '); return; } window.open('https://wa.me/91' + num + '?text=' + encodeURIComponent($('ctext').value), '_blank'); } else { window.location.href = 'mailto:' + encodeURIComponent(U.email) + '?subject=' + (CT[k].sub ? fill(CT[k].sub) : CT[k].n) + '&body=' + encodeURIComponent($('ctext').value); } ov.classList.remove('o'); };
-      const tabs = document.querySelectorAll('#custTabs button'); tabs.forEach(btn => { btn.addEventListener('click', () => { tabs.forEach(b => b.classList.remove('on')); btn.classList.add('on'); const tab = btn.dataset.tab;['profile', 'planner', 'tools', 'payments', 'sessions', 'referrals', 'messages', 'activity'].forEach(t => { const el = document.getElementById('tab-' + t); if (el) el.style.display = (t === tab) ? 'block' : 'none'; }); }); });
+      const tabs = document.querySelectorAll('#custTabs button'); tabs.forEach(btn => { btn.addEventListener('click', () => { tabs.forEach(b => b.classList.remove('on')); btn.classList.add('on'); const tab = btn.dataset.tab;['profile', 'planner', 'tools', 'payments', 'sessions', 'wallet', 'referrals', 'messages', 'activity'].forEach(t => { const el = document.getElementById('tab-' + t); if (el) el.style.display = (t === tab) ? 'block' : 'none'; }); }); });
       document.querySelectorAll('.dd summary').forEach(s => { s.addEventListener('click', e => { e.preventDefault(); const d = s.parentElement; d.open = !d.open; }); });
 
       const PAL = [["1F4E9E", "E3ECFA"], ["0F7A3D", "E1F5E9"], ["B45309", "FDEFD8"], ["6D28D9", "EDE5FC"], ["BE123C", "FCE4EA"], ["0E7490", "DAF2F7"]];
