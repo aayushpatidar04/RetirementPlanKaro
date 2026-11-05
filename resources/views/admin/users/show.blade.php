@@ -351,7 +351,7 @@
         <summary class="btn">More ▾</summary>
         <div class="ddm">
           <button type="button" class="mi" onclick="document.getElementById('editClient').showModal(); this.closest('details').open=false;">Edit client profile</button>
-          <button class="mi">Adjust points / wallet</button>
+          <button type="button" class="mi" onclick="document.getElementById('adjustPoints').showModal(); this.closest('details').open=false;">Adjust points / wallet</button>
           <button class="mi">Add note</button>
           <button class="mi">Edit tags</button>
           <button class="mi">Export client report</button>
@@ -373,9 +373,26 @@
         <label>Email<input name="email" type="email" value="{{ $user->email ?? '' }}" required></label>
         <label>City<input name="city" value="{{ $user->city ?? '' }}"></label>
         <label>PAN<input name="pan" value="{{ $user->pan ?? '' }}" maxlength="10"></label>
+        <label class="w" style="grid-column:1/-1;display:flex;gap:8px;align-items:center"><input type="checkbox" name="share_consent" value="1" {{ !empty($user->share_consent)?'checked':'' }}> Share consent</label>
       </div>
       <div class="ac" style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
         <button type="button" class="btn" onclick="document.getElementById('editClient').close()">Cancel</button>
+        <button type="submit" class="btn p">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="adjustPoints" style="border:0;padding:0;background:transparent">
+    <form method="POST" action="{{ route('admin.users.adjustPoints', $user->id) }}" class="mo" style="width:min(560px,100%);background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;display:block">
+      @csrf
+      <h3 style="margin:0 0 12px">Adjust points / wallet – {{ $fullname ?? 'Client' }}</h3>
+      <div class="fg" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <label>Adjust<select name="kind"><option>Points</option><option>Wallet (₹)</option></select></label>
+        <label>Amount (use − to deduct)<input name="amount" type="number" step="1" required></label>
+        <label class="w" style="grid-column:1/-1">Reason (required)<textarea name="reason" rows="3" required></textarea></label>
+      </div>
+      <div class="ac" style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+        <button type="button" class="btn" onclick="document.getElementById('adjustPoints').close()">Cancel</button>
         <button type="submit" class="btn p">Save</button>
       </div>
     </form>
@@ -497,11 +514,11 @@
         </div>
         <div>
           <dt>Points balance</dt>
-          <dd>{{ $user->points ?? 0 }}</dd>
+          <dd>{{ $reportPts ?? 0 }}</dd>
         </div>
         <div>
           <dt>Wallet balance</dt>
-          <dd>₹{{ number_format($user->wallet_balance ?? 0, 0) }}</dd>
+          <dd>{{ $walletPts ?? 0 }}</dd>
         </div>
         <div>
           <dt>Streak</dt>

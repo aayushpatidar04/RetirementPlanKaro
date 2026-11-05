@@ -38,22 +38,33 @@ class UserController extends Controller
         $sessions = DB::table('guidance_sessions')->where('user_id', $id)->orderByDesc('id')->get();
         $leads = DB::table('leads')->where('user_id', $id)->orderByDesc('id')->get();
         $blobs = DB::table('user_blobs')->where('user_id', $id)->get();
+        $reportPts = (int) DB::table('points_ledger')->where('user_id', $id)->where('account','report')->sum('points');
+        $walletPts = (int) DB::table('points_ledger')->where('user_id', $id)->where('account','wallet')->sum('points');
+        $ledger = DB::table('points_ledger')->where('user_id', $id)->orderByDesc('id')->limit(50)->get();
 
-        return view('admin.users.show', compact('user', 'payments', 'sessions', 'leads', 'blobs'));
+        return view('admin.users.show', compact('user', 'payments', 'sessions', 'leads', 'blobs', 'reportPts', 'walletPts', 'ledger'));
     }
 
-    public function update(Request $request, int $id): RedirectResponse
+
+    public function adjustPoints(Request $request, int $id): RedirectResponse
     {
         $data = $request->validate([
-            'name' => 'required|string|max:100',
-            'surname' => 'nullable|string|max:100',
-            'mobile' => 'required|string|max:15',
-            'email' => 'required|email|max:255',
-            'city' => 'nullable|string|max:100',
-            'pan' => 'nullable|string|max:10',
+            'kind' => 'required|in:Points,Wallet (₹)',
+            'amount' => 'required|numeric|not_in:0',
+            'reason' => 'required|string|max:120',
         ]);
-        DB::table('users')->where('id', $id)->update(array_merge($data, ['updated_at' => now()]));
-        return redirect()->route('admin.users.show', $id)->with('ok', 'Client profile updated.');
+        $account = $data['kind'] === 'Points' ? 'report' : 'wallet';
+        DB::table('points_ledger')->insert([
+            'user_id' => $id,
+            'account' => $account,
+            'type' => 'admin_adjust',
+            'points' => (int) $data['amount'],
+            'note' => 'Admin: ' . $data['reason'],
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        return redirect()->route('admin.users.show', $id)->with('ok', 'Adjustment saved.');
     }
+
 }
 
