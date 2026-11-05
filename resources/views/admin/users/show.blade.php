@@ -1,4 +1,4 @@
-@extends('admin.layout')
+﻿@extends('admin.layout')
 
 @section('title', 'Client Profile')
 
@@ -350,19 +350,29 @@
       <details class="dd">
         <summary class="btn">More ▾</summary>
         <div class="ddm">
-          <button type="button" class="mi" onclick="document.getElementById('editClient').showModal(); this.closest('details').open=false;">Edit client profile</button>
-          <button type="button" class="mi" onclick="document.getElementById('adjustPoints').showModal(); this.closest('details').open=false;">Adjust points / wallet</button>
-          <button type="button" class="mi" onclick="document.getElementById('addNote').showModal(); this.closest('details').open=false;">Add note</button>
-          <button type="button" class="mi" onclick="document.getElementById('editTags').showModal(); this.closest('details').open=false;">Edit tags</button>
-          <button class="mi">Export client report</button>
-          <button class="mi d">{{ !empty($user->status) && $user->status==='Blocked' ? 'Reinstate account' : 'Suspend account' }}</button>
+          <button type="button" class="mi"
+            onclick="document.getElementById('editClient').showModal(); this.closest('details').open=false;">Edit client
+            profile</button>
+          <button type="button" class="mi"
+            onclick="document.getElementById('adjustPoints').showModal(); this.closest('details').open=false;">Adjust
+            points / wallet</button>
+          <button type="button" class="mi"
+            onclick="document.getElementById('addNote').showModal(); this.closest('details').open=false;">Add
+            note</button>
+          <button type="button" class="mi"
+            onclick="document.getElementById('editTags').showModal(); this.closest('details').open=false;">Edit
+            tags</button>
+          <button type="button" class="mi" onclick="exportClientReport()">Export client report</button>
+          <button
+            class="mi d">{{ !empty($user->status) && $user->status === 'Blocked' ? 'Reinstate account' : 'Suspend account' }}</button>
         </div>
       </details>
     </div>
   </div>
 
   <dialog id="editClient" style="border:0;padding:0;background:transparent">
-    <form method="POST" action="{{ route('admin.users.update', $user->id) }}" class="mo" style="width:min(560px,100%);background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;display:block">
+    <form method="POST" action="{{ route('admin.users.update', $user->id) }}" class="mo"
+      style="width:min(560px,100%);background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;display:block">
       @csrf
       @method('PUT')
       <h3 style="margin:0 0 12px">Edit client profile</h3>
@@ -373,7 +383,8 @@
         <label>Email<input name="email" type="email" value="{{ $user->email ?? '' }}" required></label>
         <label>City<input name="city" value="{{ $user->city ?? '' }}"></label>
         <label>PAN<input name="pan" value="{{ $user->pan ?? '' }}" maxlength="10"></label>
-        <label class="w" style="grid-column:1/-1;display:flex;gap:8px;align-items:center"><input type="checkbox" name="share_consent" value="1" {{ !empty($user->share_consent)?'checked':'' }}> Share consent</label>
+        <label class="w" style="grid-column:1/-1;display:flex;gap:8px;align-items:center"><input type="checkbox"
+            name="share_consent" value="1" {{ !empty($user->share_consent) ? 'checked' : '' }}> Share consent</label>
       </div>
       <div class="ac" style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
         <button type="button" class="btn" onclick="document.getElementById('editClient').close()">Cancel</button>
@@ -383,13 +394,18 @@
   </dialog>
 
   <dialog id="adjustPoints" style="border:0;padding:0;background:transparent">
-    <form method="POST" action="{{ route('admin.users.adjustPoints', $user->id) }}" class="mo" style="width:min(560px,100%);background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;display:block">
+    <form method="POST" action="{{ route('admin.users.adjustPoints', $user->id) }}" class="mo"
+      style="width:min(560px,100%);background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;display:block">
       @csrf
       <h3 style="margin:0 0 12px">Adjust points / wallet – {{ $fullname ?? 'Client' }}</h3>
       <div class="fg" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <label>Adjust<select name="kind"><option>Points</option><option>Wallet (₹)</option></select></label>
+        <label>Adjust<select name="kind">
+            <option>Points</option>
+            <option>Wallet (₹)</option>
+          </select></label>
         <label>Amount (use − to deduct)<input name="amount" type="number" step="1" required></label>
-        <label class="w" style="grid-column:1/-1">Reason (required)<textarea name="reason" rows="3" required></textarea></label>
+        <label class="w" style="grid-column:1/-1">Reason (required)<textarea name="reason" rows="3"
+            required></textarea></label>
       </div>
       <div class="ac" style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
         <button type="button" class="btn" onclick="document.getElementById('adjustPoints').close()">Cancel</button>
@@ -399,7 +415,8 @@
   </dialog>
 
   <dialog id="addNote" style="border:0;padding:0;background:transparent">
-    <form method="POST" action="{{ route('admin.users.notes.store', $user->id) }}" class="mo" style="width:min(560px,100%);background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;display:block">
+    <form method="POST" action="{{ route('admin.users.notes.store', $user->id) }}" class="mo"
+      style="width:min(560px,100%);background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;display:block">
       @csrf
       <h3 style="margin:0 0 12px">Add note</h3>
       <div class="fg" style="display:grid;grid-template-columns:1fr;gap:10px">
@@ -413,18 +430,24 @@
   </dialog>
 
   <dialog id="editTags" style="border:0;padding:0;background:transparent">
-    <form method="POST" action="{{ route('admin.users.tags.update', $user->id) }}" class="mo" style="width:min(560px,100%);background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;display:block">
+    <form method="POST" action="{{ route('admin.users.tags.update', $user->id) }}" class="mo"
+      style="width:min(560px,100%);background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;display:block">
       @csrf
       @method('PUT')
       <h3 style="margin:0 0 12px">Edit tags</h3>
-      @php $tagsVal = ''; if(isset($user->tags)){ $tagsVal = is_string($user->tags)? implode(', ', json_decode($user->tags, true)?:[]) : (is_array($user->tags)? implode(', ',$user->tags):$user->tags); } @endphp
+      @php $tagsVal = '';
+        if (isset($user->tags)) {
+          $tagsVal = is_string($user->tags) ? implode(', ', json_decode($user->tags, true) ?: []) : (is_array($user->tags) ? implode(', ', $user->tags) : $user->tags);
+      } @endphp
       <div class="fg" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <label class="w" style="grid-column:1/-1">Tags (comma separated)<input name="tags" value="{{ $tagsVal }}"></label>
         <label>Assigned to<input name="assigned_to" value="{{ $user->assigned_to ?? ($user->owner ?? '') }}"></label>
         <label>Stage<select name="stage">
-          @php $st = $user->stage ?? ''; $opts=['','Signed up','Payment failed','Paid report','Session booked','Hot lead','Lost']; @endphp
-          @foreach($opts as $o)<option value="{{ $o }}" {{ $st===$o?'selected':'' }}>{{ $o?:'—' }}</option>@endforeach
-        </select></label>
+            @php $st = $user->stage ?? '';
+            $opts = ['', 'Signed up', 'Payment failed', 'Paid report', 'Session booked', 'Hot lead', 'Lost']; @endphp
+            @foreach($opts as $o)
+            <option value="{{ $o }}" {{ $st === $o ? 'selected' : '' }}>{{ $o ?: '—' }}</option>@endforeach
+          </select></label>
       </div>
       <div class="ac" style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
         <button type="button" class="btn" onclick="document.getElementById('editTags').close()">Cancel</button>
@@ -432,8 +455,8 @@
       </div>
     </form>
   </dialog>
-      </details>
-    </div>
+  </details>
+  </div>
   </div>
 
   <div class="tabs" id="custTabs">
@@ -572,7 +595,10 @@
         <div>
           <dt>Tags</dt>
           <dd>
-            @php $tv=[]; if(isset($user->tags) && $user->tags){ $tv = is_string($user->tags)?(json_decode($user->tags,true)?:[]):(is_array($user->tags)?$user->tags:[]); } @endphp
+            @php $tv = [];
+              if (isset($user->tags) && $user->tags) {
+                $tv = is_string($user->tags) ? (json_decode($user->tags, true) ?: []) : (is_array($user->tags) ? $user->tags : []);
+            } @endphp
             {{ $tv ? implode(', ', $tv) : '—' }}
           </dd>
         </div>
@@ -671,7 +697,10 @@
       @if(isset($notes) && $notes->count())
         <div class="tl">
           @foreach($notes as $n)
-            <div><b>{{ $n->author }}</b><small>{{ \Illuminate\Support\Carbon::parse($n->created_at)->format('d M Y, H:i') }}</small><div style="margin-top:4px">{{ $n->note }}</div></div>
+            <div>
+              <b>{{ $n->author }}</b><small>{{ \Illuminate\Support\Carbon::parse($n->created_at)->format('d M Y, H:i') }}</small>
+              <div style="margin-top:4px">{{ $n->note }}</div>
+            </div>
           @endforeach
         </div>
       @else
@@ -751,6 +780,7 @@
 @endsection
 
 @push('scripts')
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
   <script>
     (function () {
       const CT = [
@@ -788,12 +818,12 @@
         { n: "Quote · Credit Card", sub: "Aapke Credit Card quotes", t: "Hi {name},\n\nAapne hamare paas Credit Card ke liye quote request bheji thi, uske liye dhanyavaad. Aapke diye gaye details ke aadhar par humne best options shortlist kiye hain:\n\n1) {option_1_name} – ₹{option_1_fee}/year\n2) {option_2_name} – ₹{option_2_fee}/year\n\nFees, rewards aur eligibility compare karein.\n\nAgle step ke liye aapko PAN, Aadhaar aur income proof (salary slip / ITR) chahiye hongi. Aap inhe is mail ke reply me ya WhatsApp par bhej sakte hain.\n\nKoi sawal ho ya options compare karne me madad chahiye to bataiye, hum call par samjha denge.\n\nWarm regards,\nTeam Retirement Plan Karo\nretirementplankaro.com", ch: "em" },
         { n: "Quote · Personal Loan", sub: "Aapke Personal Loan quotes", t: "Hi {name},\n\nAapne hamare paas Personal Loan ke liye quote request bheji thi, uske liye dhanyavaad. Aapke diye gaye details ke aadhar par humne best options shortlist kiye hain:\n\n1) {option_1_name} – ₹{option_1_rate}/year\n2) {option_2_name} – ₹{option_2_rate}/year\n\nInterest rate aur processing fee compare karein.\n\nAgle step ke liye aapko PAN, Aadhaar, 3 mahine ki salary slip aur 6 mahine ka bank statement chahiye hongi. Aap inhe is mail ke reply me ya WhatsApp par bhej sakte hain.\n\nKoi sawal ho ya options compare karne me madad chahiye to bataiye, hum call par samjha denge.\n\nWarm regards,\nTeam Retirement Plan Karo\nretirementplankaro.com", ch: "em" },
         { n: "Quote · Loan Against Mutual Fund", sub: "Aapke Loan Against Mutual Fund quotes", t: "Hi {name},\n\nAapne hamare paas Loan Against Mutual Fund ke liye quote request bheji thi, uske liye dhanyavaad. Aapke diye gaye details ke aadhar par humne best options shortlist kiye hain:\n\n1) {option_1_name} – ₹{option_1_rate}/year\n2) {option_2_name} – ₹{option_2_rate}/year\n\nAapke funds beche bina low-interest loan mil sakta hai.\n\nAgle step ke liye aapko PAN, Aadhaar aur mutual fund holdings statement (CAS) chahiye hongi. Aap inhe is mail ke reply me ya WhatsApp par bhej sakte hain.\n\nKoi sawal ho ya options compare karne me madad chahiye to bataiye, hum call par samjha denge.\n\nWarm regards,\nTeam Retirement Plan Karo\nretirementplankaro.com", ch: "em" },
-        
+
       ];
       const U = { name: @json($fullname ?? 'Customer'), mobile: @json($user->mobile ?? ''), email: @json($user->email ?? ''), link: location.origin + '/' };
       if (!document.getElementById('cmo')) {
         const m = document.createElement('div'); m.id = 'cmo'; m.className = 'ov';
-        m.innerHTML = '<div class="mo" style="width:min(920px,98vw)"><h3 id="ctit">WhatsApp · ' + (U.name || '') + '</h3><p style="color:var(--mut);margin:-4px 0 8px">+' + (U.mobile || '') + '</p><label style="font-size:12.5px;color:var(--mut);font-weight:600">Template<select class="in" id="ctsel" style="max-height: 400px;"></select></label><textarea class="in" id="ctext" rows="10" style="margin-top:8px"></textarea><p style="color:var(--mut);font-size:12px;margin:4px 0 0" id="chelp">Preview · personalised for this client</p><div class="ac" style="flex-wrap:wrap"><button type="button" class="btn" id="fc">Cancel</button><button type="button" class="btn" id="cn">+ New template</button><button type="button" class="btn" id="ce">Edit template</button><button type="button" class="btn wa" id="ws">OK · Send on WhatsApp</button></div></div>';
+        m.innerHTML = '<div class="mo" style="width:min(920px,98vw)"><h3 id="ctit">WhatsApp · ' + (U.name || '') + '</h3><p style="color:var(--mut);margin:-4px 0 8px">+' + (U.mobile || '') + '</p><label style="font-size:12.5px;color:var(--mut);font-weight:600">Template<select class="in" id="ctsel"></select></label><textarea class="in" id="ctext" rows="10" style="margin-top:8px"></textarea><p style="color:var(--mut);font-size:12px;margin:4px 0 0" id="chelp">Preview · personalised for this client</p><div class="ac" style="flex-wrap:wrap"><button type="button" class="btn" id="fc">Cancel</button><button type="button" class="btn" id="cn">+ New template</button><button type="button" class="btn" id="ce">Edit template</button><button type="button" class="btn wa" id="ws">OK · Send on WhatsApp</button></div></div>';
         document.body.appendChild(m);
         const st = document.createElement('style');
         st.textContent = '.ov{position:fixed;inset:0;background:rgba(10,12,30,.5);display:none;align-items:center;justify-content:center;z-index:200;padding:16px}.ov.o{display:flex}.mo{background:var(--card);border-radius:14px;width:min(560px,100%);max-height:90vh;overflow:auto;padding:20px}.mo h3{margin:0 0 12px}.fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fg .w{grid-column:1/-1}.fg label{display:block;font-size:12.5px;color:var(--mut);font-weight:600}.fg input,.fg select,.fg textarea,.in{font:inherit;width:100%;margin-top:3px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}.ac{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}';
@@ -831,6 +861,26 @@
       $('ws').onclick = function () { if (raw) { alert('Click Save template first'); return; } if (ch === 'wa') { const num = (U.mobile || '').replace(/\D/g, '').slice(-10); if (num.length < 10) { alert('Enter correct mobile number '); return; } window.open('https://wa.me/91' + num + '?text=' + encodeURIComponent($('ctext').value), '_blank'); } else { window.location.href = 'mailto:' + encodeURIComponent(U.email) + '?subject=' + (CT[k].sub ? fill(CT[k].sub) : CT[k].n) + '&body=' + encodeURIComponent($('ctext').value); } ov.classList.remove('o'); };
       const tabs = document.querySelectorAll('#custTabs button'); tabs.forEach(btn => { btn.addEventListener('click', () => { tabs.forEach(b => b.classList.remove('on')); btn.classList.add('on'); const tab = btn.dataset.tab;['profile', 'planner', 'tools', 'payments', 'sessions', 'referrals', 'messages', 'activity'].forEach(t => { const el = document.getElementById('tab-' + t); if (el) el.style.display = (t === tab) ? 'block' : 'none'; }); }); });
       document.querySelectorAll('.dd summary').forEach(s => { s.addEventListener('click', e => { e.preventDefault(); const d = s.parentElement; d.open = !d.open; }); });
+
+      const PAL = [["1F4E9E", "E3ECFA"], ["0F7A3D", "E1F5E9"], ["B45309", "FDEFD8"], ["6D28D9", "EDE5FC"], ["BE123C", "FCE4EA"], ["0E7490", "DAF2F7"]];
+      async function xlsx(file, sheets) { if (!window.ExcelJS) { alert('Excel library could not be loaded.'); return; } const wb = new ExcelJS.Workbook(), used = {}; const thin = { style: 'thin', color: { argb: 'FFCBD5E1' } }, bd = { top: thin, left: thin, bottom: thin, right: thin }; sheets.forEach((s, n) => { const [c, l] = PAL[n % PAL.length]; let nm = s.name.replace(/[\\\/\?\*\[\]:]/g, '-').slice(0, 28); used[nm] = (used[nm] || 0) + 1; if (used[nm] > 1) nm += ' ' + used[nm]; const ws = wb.addWorksheet(nm, { views: [{ showGridLines: false, state: 'frozen', ySplit: 3 }] }); const nc = Math.max(s.head.length, 2); ws.mergeCells(1, 1, 1, nc); const t = ws.getCell(1, 1); t.value = s.title || s.name; t.font = { bold: true, size: 16, color: { argb: 'FF' + c } }; t.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + c } }; t.alignment = { vertical: 'middle', indent: 1 }; ws.getRow(1).height = 32; ws.mergeCells(2, 1, 2, nc); const sb = ws.getCell(2, 1); sb.value = s.sub || ('Retirement Plan Karo · ' + new Date().toLocaleDateString('en-IN')); sb.font = { italic: true, color: { argb: 'FF64748B' } }; sb.alignment = { indent: 1 }; const h = ws.getRow(3); h.values = s.head; h.height = 24; h.eachCell((k) => { k.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + c } }; k.font = { bold: true, color: { argb: 'FFFFFFFF' } }; k.border = bd; k.alignment = { vertical: 'middle', horizontal: 'center' }; }); s.rows.forEach((r, i) => { const row = ws.addRow(r); row.height = 20; for (let ci = 1; ci <= nc; ci++) { const k = row.getCell(ci); k.border = bd; k.alignment = { vertical: 'middle', wrapText: true }; k.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: i % 2 ? 'FFFFFFFF' : 'FF' + l } }; if (typeof k.value === 'number' && k.value >= 1000) k.numFmt = '#,##0'; } }); if (!s.rows.length) { ws.addRow(['No records']); } s.head.forEach((x, ci) => { ws.getColumn(ci + 1).width = Math.min(50, Math.max(String(x).length + 4, ...s.rows.map(r => String(r[ci] ?? '').length + 3))); }); ws.autoFilter = { from: { row: 3, column: 1 }, to: { row: 3, column: nc } }; (s.charts || []).forEach((g, k) => { const id = wb.addImage({ base64: g, extension: 'png' }); ws.addImage(id, { tl: { col: nc + 1, row: 2 + k * 16 }, ext: { width: 520, height: 300 } }); }); }); const buf = await wb.xlsx.writeBuffer(); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })); a.download = file; a.click(); }
+      function chart(kind, title, labels, vals) { const W = 520, H = 300, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, W, H); x.fillStyle = '#111827'; x.font = 'bold 14px sans-serif'; x.fillText(title, 12, 22); const max = Math.max(1, ...vals), padL = 40, padB = 36, padT = 34, innerW = W - padL - 20, innerH = H - padT - padB; x.strokeStyle = '#CBD5E1'; x.beginPath(); x.moveTo(padL, padT); x.lineTo(padL, H - padB); x.lineTo(W - 12, H - padB); x.stroke(); const bw = innerW / Math.max(1, vals.length); vals.forEach((v, i) => { const hgt = innerH * (v / max); const xx = padL + i * bw + 10; const yy = H - padB - hgt; x.fillStyle = '#' + PAL[i % PAL.length][0]; x.fillRect(xx, yy, Math.max(10, bw - 20), hgt); x.fillStyle = '#334155'; x.font = '11px sans-serif'; x.fillText(String(labels[i] || '').slice(0, 12), xx, H - padB + 14); x.fillText(String(v), xx, yy - 4); }); return c.toDataURL('image/png').split(',')[1]; }
+      window.exportClientReport = async function () {
+        const T = U.name + ' · ' + U.mobile;
+        const nw = [{{ $reportPts ?? 0 }},{{ $walletPts ?? 0 }}];
+        const S = [];
+        S.push({
+          name: 'Summary', title: 'Customer summary · ' + U.name, sub: T, head: ['Field', 'Value'], rows: [
+            ['Name', @json($fullname ?? '')], ['Mobile', @json($user->mobile ?? '')], ['Email', @json($user->email ?? '')], ['City', @json($user->city ?? '')], ['Stage', @json($user->stage ?? '')], ['Joined', @json(isset($user->created_at) ? \Illuminate\Support\Carbon::parse($user->created_at)->format('d M Y, H:i') : '')], ['Referral code', @json($user->referral_code ?? '')], ['Points (report)', @json($reportPts ?? 0)], ['Points (wallet)', @json($walletPts ?? 0)]
+          ], charts: [chart('bar', 'Points overview', ['Report pts', 'Wallet pts'], nw)]
+        });
+        S.push({ name: 'Payments', title: 'Payments', sub: T, head: ['Txn ID', 'Purpose', 'Amount', 'Status', 'PayU ID', 'When'], rows: [@foreach(($payments ?? []) as $p)[@json($p->txnid), @json($p->purpose), @json((float) $p->amount), @json($p->status), @json($p->payu_id ?? ''), @json(\Illuminate\Support\Carbon::parse($p->created_at)->format('d M Y, H:i'))], @endforeach] });
+        S.push({ name: 'Sessions', title: 'Guidance sessions', sub: T, head: ['Date', 'Slot', 'Mode', 'Status', 'Note'], rows: [@foreach(($sessions ?? []) as $s)[@json($s->date), @json($s->slot), @json($s->mode), @json($s->status), @json($s->note ?? '')], @endforeach] });
+        S.push({ name: 'Notes', title: 'Notes', sub: T, head: ['Author', 'Note', 'When'], rows: [@foreach(($notes ?? []) as $n)[@json($n->author), @json($n->note), @json(\Illuminate\Support\Carbon::parse($n->created_at)->format('d M Y, H:i'))], @endforeach] });
+        S.push({ name: 'Activity', title: 'Activity / Leads', sub: T, head: ['Event', 'Mobile', 'Email', 'IP', 'When'], rows: [@foreach(($leads ?? []) as $l)[@json($l->event), @json($l->mobile ?? ''), @json($l->email ?? ''), @json($l->ip ?? ''), @json(\Illuminate\Support\Carbon::parse($l->created_at)->format('d M Y, H:i'))], @endforeach] });
+        S.push({ name: 'Wallet ledger', title: 'Wallet & points ledger', sub: T, head: ['Account', 'Type', 'Points', 'Note', 'When'], rows: [@foreach(($ledger ?? []) as $x)[@json($x->account), @json($x->type), @json((int) $x->points), @json($x->note ?? ''), @json(\Illuminate\Support\Carbon::parse($x->created_at)->format('d M Y, H:i'))], @endforeach] });
+        await xlsx('Customer_' + (U.name || 'Client').replace(/\W+/g, '_') + '.xlsx', S);
+      };
     })();
   </script>
 @endpush
