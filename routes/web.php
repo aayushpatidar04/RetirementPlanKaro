@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\CouponController as AdminCouponController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\LeadController as AdminLeadController;
+use App\Http\Controllers\Admin\MessageController as AdminMessageController;
 use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Admin\QuoteController as AdminQuoteController;
 use App\Http\Controllers\Admin\ReferralController as AdminReferralController;
@@ -146,5 +147,19 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('referrals/campaign-link', [AdminReferralController::class, 'addCampaignLink'])->name('referrals.campaign-link.add');
         Route::put('referrals/campaign-link', [AdminReferralController::class, 'editCampaignLink'])->name('referrals.campaign-link.edit');
         Route::delete('referrals/campaign-link', [AdminReferralController::class, 'deleteCampaignLink'])->name('referrals.campaign-link.delete');
+
+        // Messages & Email (Client Communications)
+        Route::get('messages', [AdminMessageController::class, 'index'])->name('messages');
+        Route::post('messages/templates', [AdminMessageController::class, 'storeTemplate'])->name('messages.templates.store');
+        Route::put('messages/templates/{id}', [AdminMessageController::class, 'updateTemplate'])->name('messages.templates.update');
+        Route::delete('messages/templates', [AdminMessageController::class, 'deleteTemplate'])->name('messages.templates.delete');
+        Route::post('messages/templates/duplicate', [AdminMessageController::class, 'duplicateTemplate'])->name('messages.templates.duplicate');
+        Route::post('messages/stage-mapping', [AdminMessageController::class, 'saveStageMapping'])->name('messages.stage-mapping');
+        Route::post('messages/send', [AdminMessageController::class, 'send'])->name('messages.send');
+        Route::post('messages/schedule', [AdminMessageController::class, 'schedule'])->name('messages.schedule');
+        Route::post('messages/scheduled/send', [AdminMessageController::class, 'sendScheduled'])->name('messages.scheduled.send');
+        Route::post('messages/scheduled/cancel', [AdminMessageController::class, 'cancelScheduled'])->name('messages.scheduled.cancel');
+        Route::get('messages/export/logs', [AdminMessageController::class, 'exportLogs'])->name('messages.export.logs');
+        Route::get('messages/export/templates', [AdminMessageController::class, 'exportTemplates'])->name('messages.export.templates');
     });
 });

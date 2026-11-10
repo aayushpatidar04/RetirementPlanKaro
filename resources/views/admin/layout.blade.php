@@ -493,7 +493,8 @@
         sessions</a>
       <a href="{{ route('admin.referrals') }}"
         class="nsub {{ request()->routeIs('admin.referrals') ? 'on' : '' }}">Referrals</a>
-      <a href="#" class="nsub">Messages & Email</a>
+      <a href="{{ route('admin.messages') }}"
+        class="nsub {{ request()->routeIs('admin.messages') ? 'on' : '' }}">Messages & Email</a>
     </details>
 
     <details class="nav-group" {{

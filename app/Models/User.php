@@ -49,6 +49,17 @@ class User extends Authenticatable implements MustVerifyEmailContract
             'password' => 'hashed',
             'clicks' => 'integer',
             'refoff' => 'boolean',
+            'tags' => 'array',
         ];
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    public function guidanceSessions()
+    {
+        return $this->hasMany(GuidanceSession::class);
     }
 }

@@ -11,7 +11,7 @@ class GuidanceSession extends Model
 
     protected $table = 'guidance_sessions';
 
-    protected $fillable = ['user_id', 'payment_id', 'date', 'slot', 'mode', 'mobile', 'note', 'status'];
+    protected $fillable = ['user_id', 'payment_id', 'date', 'slot', 'mode', 'mobile', 'note', 'status', 'question', 'advisor', 'cancel_reason'];
 
     public function user()
     {
