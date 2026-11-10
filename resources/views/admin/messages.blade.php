@@ -454,6 +454,15 @@
         min-width: 0;
       }
     }
+
+    .sched input {
+      border: 1px solid var(--line);
+      background: var(--bg);
+      font: inherit;
+      color: var(--ink);
+      padding: 6px 8px;
+      border-radius: 8px
+    }
   </style>
 @endpush
 

@@ -507,7 +507,7 @@
       <summary class="ngh">Pricing & Incentives <span class="chev">▾</span></summary>
       <a href="{{ route('admin.coupons') }}" class="nsub {{ request()->routeIs('admin.coupons') ? 'on' : '' }}">Discount
         codes</a>
-      <a href="#" class="nsub">One Window Investing</a>
+      <a href="#" class="nsub">Investment Partners</a>
     </details>
 
     <details class="nav-group" {{ 

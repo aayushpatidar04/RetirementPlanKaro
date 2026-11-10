@@ -105,7 +105,7 @@
   </div>
 
   @if($logsQuery->hasPages())
-    <div style="padding:12px 16px;display:flex;justify-content:center">{{ $logsQuery->links() }}</div>
+    <div style="padding:12px 16px;display:flex;justify-content:center">{{ $logsQuery->links('vendor.pagination.admin') }}</div>
   @endif
 
   <div class="ac" style="margin:12px 16px;border-top:1px solid var(--line);padding-top:12px">

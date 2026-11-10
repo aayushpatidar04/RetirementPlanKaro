@@ -128,7 +128,7 @@
         </form>
         <form method="POST" action="{{ route('admin.messages.templates.duplicate') }}" id="tplDup">@csrf<input type="hidden"
             name="id" value="{{ $c->id }}"></form>
-        <form method="POST" action="{{ route('admin.messages.templates.delete') }}" id="tplDel">@csrf<input type="hidden"
+        <form method="POST" action="{{ route('admin.messages.templates.delete') }}" id="tplDel">@csrf @method('DELETE')<input type="hidden"
             name="id" value="{{ $c->id }}"></form>
     @endif
   </div>
