@@ -29,6 +29,9 @@ class User extends Authenticatable implements MustVerifyEmailContract
         'tags',
         'stage',
         'assigned_to',
+        'code',
+        'clicks',
+        'refoff',
     ];
 
     protected $hidden = [
@@ -44,6 +47,8 @@ class User extends Authenticatable implements MustVerifyEmailContract
             'suspended_at' => 'datetime',
             'share_consent' => 'boolean',
             'password' => 'hashed',
+            'clicks' => 'integer',
+            'refoff' => 'boolean',
         ];
     }
 }

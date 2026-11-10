@@ -491,7 +491,8 @@
       <a href="{{ route('admin.sessions') }}"
         class="nsub {{ request()->routeIs('admin.sessions') ? 'on' : '' }}">Advisory
         sessions</a>
-      <a href="#" class="nsub">Referrals</a>
+      <a href="{{ route('admin.referrals') }}"
+        class="nsub {{ request()->routeIs('admin.referrals') ? 'on' : '' }}">Referrals</a>
       <a href="#" class="nsub">Messages & Email</a>
     </details>
 
