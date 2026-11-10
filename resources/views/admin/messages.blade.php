@@ -11,7 +11,8 @@
       margin: 0 0 16px;
     }
 
-    .stab button {
+    .stab button,
+    .stab a {
       padding: 6px 14px;
       border-radius: 99px;
       border: 1px solid var(--line);
@@ -19,9 +20,11 @@
       color: var(--mut);
       font-weight: 600;
       cursor: pointer;
+      text-decoration: none;
     }
 
-    .stab button.on {
+    .stab button.on,
+    .stab a.on {
       background: var(--pri);
       color: #fff;
       border-color: var(--pri);
@@ -152,8 +155,6 @@
 
     /* Bottom bar */
     .ms-bar {
-      position: sticky;
-      bottom: 0;
       display: flex;
       gap: 12px;
       align-items: center;
@@ -172,7 +173,8 @@
       flex-wrap: wrap;
     }
 
-    .tbs button {
+    .tbs button,
+    .tbs a {
       font: inherit;
       font-weight: 600;
       border: 1px solid var(--line);
@@ -181,9 +183,11 @@
       padding: 6px 14px;
       border-radius: 99px;
       cursor: pointer;
+      text-decoration: none;
     }
 
-    .tbs button.on {
+    .tbs button.on,
+    .tbs a.on {
       background: var(--pri);
       color: #fff;
       border-color: var(--pri);
@@ -527,6 +531,25 @@
       color: var(--mut);
       font-weight: 600;
     }
+
+    .em {
+      color: var(--mut);
+      padding: 20px;
+      text-align: center;
+    }
+
+    /* Form inline */
+    form.inline {
+      display: inline;
+    }
+
+    /* Segment select full width on mobile */
+    @media (max-width: 600px) {
+      #ms-seg {
+        width: 100%;
+        min-width: 0;
+      }
+    }
   </style>
 @endpush
 
@@ -617,385 +640,68 @@
       };
     }
 
-    // ===== STATE =====
-    const MS = {
-      tab: '{{ $tab }}',           // send, act, tpl
-      ch: '{{ $channel }}',        // wa, em
-      seg: 'all',
-      off: new Set(),
-      sent: {},
-      k: -1,                       // selected template index
-      raw: '',
-      text: '',
-      sub: '',
-      fixed: [],
-    };
-
-    @php
-        $templates = $waTemplates
-            ->concat($emTemplates)
-            ->map(fn ($t) => [
-                'id' => $t->id,
-                'n' => $t->name,
-                'ch' => $t->channel,
-                'sub' => $t->subject,
-                't' => $t->body,
-            ])
-            ->values()
-            ->all();
-    @endphp
-
-    const CT = @json($templates);
-    const USERS = @json($users);
-    const LSTAGES = @json($leadStages);
-    const STAGE_MAPPING = @json($stageMapping);
-
-    // ===== RENDER =====
-    function render() {
-      const m = document.getElementById('m');
-      if (!m) return;
-      m.innerHTML = renderTabs() + (MS.tab === 'send' ? renderSend() : MS.tab === 'act' ? renderAct() : renderTemplates());
-      bindSend();
-      if (MS.tab === 'tpl') bindTemplates();
-      if (MS.tab === 'act') bindActivity();
-    }
-
-    function renderTabs() {
-      const tabs = [['send', 'Send'], ['act', 'Activity'], ['tpl', 'Templates']];
-      let d = 0;
-      @if($scheduled->where('done', false)->where('scheduled_at', '<=', now())->count())
-        d = {{ $scheduled->where('done', false)->where('scheduled_at', '<=', now())->count() }};
-      @endif
-        return `<div class="stab">${tabs.map((t, i) => `<button data-a="mstab" data-i="${i}" class="${MS.tab === t[0] ? 'on' : ''}">${t[1]}${t[0] === 'act' && d ? ` <span class="pill bad">${d}</span>` : ''}</button>`).join('')}</div>`;
-    }
-
-    // ===== SEND TAB =====
-    function renderSend() {
-      const wa = MS.ch === 'wa';
-      const ts = CT.map((c, i) => [c, i]).filter(x => x[0].ch === MS.ch);
-      const R = msRecips();
-      return `
-          <div class="card" style="margin:0">
-            <div class="ms-sec"><div class="ms-h"><i>1</i>Send through</div><div class="tbs" style="margin:0">
-              <button data-a="msch" data-i="0" class="${wa ? 'on' : ''}">WhatsApp</button>
-              <button data-a="msch" data-i="1" class="${!wa ? 'on' : ''}">Email</button>
-            </div></div>
-            <div class="ms-sec"><div class="ms-h"><i>2</i>Who gets it? <small>Tick or untick people · or add new numbers / emails</small></div>
-              <div class="ms-row">
-                <select id="ms-seg">${Object.keys(SEGS).map(seg => `<option value="${seg}" ${MS.seg === seg ? 'selected' : ''}>${seg}</option>`).join('')}${MS.fixed.length ? `<optgroup label="Other"><option value="__fixed" ${MS.seg === '__fixed' ? 'selected' : ''}>Leads you filtered (${MS.fixed.length})</option></optgroup>` : ''}<optgroup label="By lead stage">${LSTAGES.map(s => `<option value="stage_${s}" ${MS.seg === 'stage_' + s ? 'selected' : ''}>Stage · ${s}</option>`).join('')}</optgroup><optgroup label="Other"><option value="new_only" ${MS.seg === 'new_only' ? 'selected' : ''}>Only new numbers / emails</option></optgroup></select>
-                <button class="btn s" data-a="msall" data-i="1">Select all</button>
-                <button class="btn s" data-a="msall" data-i="0">Select none</button>
-              </div>
-              <div class="ms-list sc" id="ms-list">${msList()}</div>
-              <div class="ms-add"><b>Add new ${wa ? 'numbers' : 'emails'} <span style="font-weight:500;color:var(--mut)">(people not in the portal yet)</span></b>
-                <textarea id="ms-raw" rows="3" placeholder="${wa ? '9876543210, 9123456789 — or one per line' : 'name@gmail.com, other@yahoo.com — or one per line'}">${MS.raw}</textarea>
-                <div class="ms-chips" id="ms-chips">${msChips()}</div>
-                <div class="ms-note">You can paste ${wa ? 'numbers' : 'email IDs'} in any format. They get this message too — they are not saved as customers.</div>
-              </div></div>
-            <div class="ms-sec"><div class="ms-h"><i>3</i>Message</div>
-              <div class="ms-row" style="margin-bottom:10px">
-                <select id="ms-tpl"><option value="-1" ${MS.k < 0 ? 'selected' : ''}>Write my own message</option>${ts.map(x => `<option value="${x[1]}" ${x[1] === MS.k ? 'selected' : ''}>${x[0].n}</option>`).join('')}</select>
-              </div>
-              ${!wa ? `<input type="text" id="ms-sub" placeholder="Email subject" value="${MS.sub}" style="margin-bottom:10px">` : ''}
-              <textarea id="ms-text" rows="${wa ? 7 : 11}" placeholder="Type your message here…">${MS.text}</textarea>
-              <div class="ms-note">${wa ? '<b>Friend</b> is replaced by each customer\'s first name. WhatsApp opens one chat at a time — press <b>Send next</b> for each person.' : 'Email goes to everyone in BCC (they cannot see each other). Gmail opens 30 people at a time.'}</div>
-            </div>
-            <div class="ms-bar" id="ms-bar">${msBar()}</div>
-          </div>
-        `;
-    }
-
-    // Recipient segments
-    const SEGS = {
-      'all': 'All customers',
-      'paid': 'Paid customers',
-      'unpaid': 'Unpaid / failed',
-      'wallet': 'Wallet users',
-      'leads': 'Leads (signed up only)',
-    };
-
-    function msBase() {
-      const wa = MS.ch === 'wa';
-      if (MS.seg === '__fixed') return MS.fixed.map(id => USERS.find(u => u.id == id)).filter(Boolean);
-      if (MS.seg === 'new_only') return [];
-      if (MS.seg.startsWith('stage_')) return USERS.filter(u => u.stage === MS.seg.replace('stage_', ''));
-      let list = USERS;
-      if (MS.seg === 'paid') list = list.filter(u => u.stage === 'Paid report' || u.stage === 'Wallet active');
-      if (MS.seg === 'unpaid') list = list.filter(u => u.stage === 'Payment failed' || u.stage === 'Payment pending');
-      if (MS.seg === 'wallet') list = list.filter(u => u.stage === 'Wallet active');
-      if (MS.seg === 'leads') list = list.filter(u => u.stage === 'Signed up');
-      return list;
-    }
-
-    function msRecips() {
-      const wa = MS.ch === 'wa';
-      const base = msBase();
-      const list = base.filter(u => {
-        const val = wa ? (u.mobile || '') : (u.email || '');
-        return val && !MS.off.has(u.id);
-      });
-      const bad = base.filter(u => {
-        const val = wa ? (u.mobile || '') : (u.email || '');
-        return !val && !MS.off.has(u.id);
-      });
-      const rows = list.map(u => ({
-        u, name: u.name, mobile: u.mobile, email: u.email, isNew: false, extra: false, bad: false, off: MS.off.has(u.id)
-      }));
-      const chips = MS.raw.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
-      chips.forEach(c => {
-        const val = wa ? c : c;
-        const exists = list.some(u => (wa ? u.mobile : u.email) === val);
-        if (!exists) rows.push({ u: null, name: wa ? '' : c.split('@')[0], mobile: wa ? val : '', email: wa ? '' : val, isNew: true, extra: true, bad: !val, off: false });
-      });
-      return { list: rows, base, bad };
-    }
-
-    function msList() {
-      const R = msRecips(), wa = MS.ch === 'wa';
-      if (!R.list.length) return '<div class="em">No recipients yet — choose a group above or add numbers below.</div>';
-      return `<table><thead><tr><th></th><th>Name</th><th>${wa ? 'WhatsApp number' : 'Email ID'}</th><th></th></tr></thead><tbody>${R.list.map(r => `<tr><td>${r.extra ? '<span title="Added by you"></span>' : `<input type="checkbox" class="ms-chk" data-id="${r.u?.id}" ${r.off || r.bad ? '' : 'checked'} ${r.bad ? 'disabled' : ''}>`}</td><td>${r.name || '—'} ${r.isNew ? '<span class="pill pri">New</span>' : ''}</td><td>${r.bad ? '<span style="color:var(--bad)">' + (wa ? 'no valid number' : 'no valid email') + '</span>' : (wa ? r.mobile : r.email)}</td><td>${MS.sent[msKey(r)] ? '<span class="pill ok">Sent</span>' : ''}</td></tr>`).join('')}</tbody></table>`;
-    }
-
-    function msKey(r) { return (r.u?.id || 'new') + '|' + (MS.ch === 'wa' ? (r.mobile || '') : (r.email || '')); }
-
-    function msChips() {
-      const wa = MS.ch === 'wa';
-      return MS.raw.split(/[\n,]+/).map(s => s.trim()).filter(Boolean).map(v => `<span class="chip">${wa ? v : v} <button data-remove-chip="${v}">×</button></span>`).join('');
-    }
-
-    function msBar() {
-      const R = msRecips(), n = R.list.length, wa = MS.ch === 'wa';
-      const left = R.list.filter(x => !MS.sent[msKey(x)]);
-      const dis = !n || !MS.text.trim() || (!wa && !MS.sub.trim());
-      const info = n ? `<b>${n}</b> ${wa ? 'WhatsApp numbers' : 'email IDs'} ready${n > left.length ? ` · <span style="color:var(--ok)">${n - left.length} sent</span>` : ''}` : '<span style="color:var(--mut)">Choose recipients to continue</span>';
-      let btn;
-      if (n && !left.length) btn = `<span class="pill ok">All ${n} done</span> <button class="btn" data-a="msreset">Send another</button>`;
-      else if (wa) btn = `<button class="btn wa lg" data-a="msgo" ${dis ? 'disabled' : ''}>${left.length < n ? `Send next (${left.length} left)` : `Send on WhatsApp${n ? ' · ' + n : ''}`}</button>`;
-      else btn = `<button class="btn p lg" data-a="msgo" ${dis ? 'disabled' : ''}>${left.length > 30 ? `Send to next 30 (${left.length} left)` : `Send Email${n ? ' · ' + n : ''}`}</button> <button class="btn link" data-a="msmail" ${dis ? 'disabled' : ''}>Use Mail app</button>`;
-      return `<div>${info}</div><div class="row" style="align-items:center">${n ? `<button class="btn link" data-a="mscopy">Copy ${wa ? 'numbers' : 'emails'}</button>` : ''}${btn}</div>`;
-    }
-
-    // ===== ACTIVITY TAB =====
-    function renderAct() {
-      const pend = @json($scheduled->where('done', false));
-      const lg = @json($logsQuery->items());
-      let h = '';
-      if (pend.length) {
-        h += `<div class="card"><h3>Scheduled · ${pend.length} pending${pend.filter(x => new Date(x.scheduled_at) <= new Date()).length ? ` · ${pend.filter(x => new Date(x.scheduled_at) <= new Date()).length} due now` : ''}</h3><div class="sc">${renderTable(['Send at', 'Channel', 'To', 'Subject', 'Status', 'Action'], pend.map(x => [x.scheduled_at.replace('T', ' '), x.ch === 'wa' ? 'WhatsApp' : 'Email', x.recipient?.name || x.recipient?.mobile || x.recipient?.mail || '', x.subject || '', x.done ? '<span class="pill ok">Sent</span>' : new Date(x.scheduled_at) <= new Date() ? '<span class="pill bad">Due now</span>' : '<span class="pill warn">Scheduled</span>', x.done ? '' : `<div class="row"><button class="btn s p" data-a="ssend" data-i="${x.id}">Send now</button><button class="btn s d" data-a="sdel" data-i="${x.id}">Cancel</button></div>`]))}</div></div>`;
-      }
-      h += `<div class="card"><h3>Sent messages · ${lg.length}</h3><div class="sc">${renderTable(['Date', 'To', 'Channel', 'Subject', 'Status'], lg.map(c => [c.sent_at ? new Date(c.sent_at).toLocaleString('en-IN') : '', c.recipient?.name || c.recipient?.mobile || c.recipient?.email || '', c.ch === 'wa' ? '<span class="pill ok">WhatsApp</span>' : '<span class="pill pri">Email</span>', c.subject || '', `<span class="pill ${c.status === 'sent' ? 'ok' : 'bad'}">${c.status}</span>`]))}</div></div>`;
-      return h;
-    }
-
-    function renderTable(head, rows) {
-      if (!rows.length) return '<div class="em">No records</div>';
-      return `<table><thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
-    }
-
-    // ===== TEMPLATES TAB =====
-    function renderTemplates() {
-      const tabs = [['wa', 'WhatsApp Templates'], ['em', 'Email Templates'], ['sm', 'Lead-stage mapping']];
-      let h = `<div class="tbs">${tabs.map((t, i) => `<button data-a="ttab" data-i="${i}" class="${TS.tab === t[0] ? 'on' : ''}">${t[1]}${t[0] !== 'sm' ? ' (' + CT.filter(c => c.ch === t[0]).length + ')' : ''}</button>`).join('')}</div>`;
-      if (TS.tab === 'sm') {
-        const sel = (ch, s) => `<select class="in" data-sm="${s}|${ch}" style="margin:0"><option value="">— None —</option>${CT.filter(c => c.ch === ch).map(c => `<option value="${c.id}" ${STAGE_MAPPING[s] && STAGE_MAPPING[s][ch] === c.id ? 'selected' : ''}>${c.n}</option>`).join('')}</select>`;
-        h += `<div class="card"><h3>Default WhatsApp and email template for each prospect stage · shown as Recommended when sending</h3><div class="sc">${renderTable(['Lead stage', 'WhatsApp template', 'Email template'], LSTAGES.map(s => [s, sel('wa', s), sel('em', s)]))}</div></div>`;
-        return h;
-      }
-      const L = CT.map((c, i) => [c, i]).filter(x => x[0].ch === TS.tab);
-      if (!L.some(x => x[1] === TS.i)) TS.i = L.length ? L[0][1] : -1;
-      const c = CT[TS.i];
-      h += `<div class="tp"><div class="card" style="margin:0"><div class="bar"><button class="btn p s" data-a="tnew">+ New ${TS.tab === 'wa' ? 'WhatsApp' : 'Email'} template</button></div><div class="tl2">${L.map(x => `<div class="tli ${x[1] === TS.i ? 'on' : ''}" data-a="tsel" data-i="${x[1]}"><b>${x[0].n}</b>${x[0].ch === 'em' ? `<small>${x[0].sub || ''}</small>` : ''}</div>`).join('')}</div></div>`;
-      if (c) {
-        h += `<div class="card" style="margin:0"><div class="pg" style="grid-template-columns:1fr"><div><label>Template name<input class="in" id="tn" value="${c.n}"></label></div>${c.ch === 'em' ? `<div><label>Email subject<input class="in" id="ts" value="${c.sub || ''}"></label></div>` : ''}<div><label>Message<textarea class="in" id="tt" rows="${c.ch === 'em' ? 15 : 10}">${c.t}</textarea></label></div><div style="color:var(--mut);font-size:12.5px">Variables: {name} {link} {amount} {purpose} {date} {n} {names} {pts} {coupon} {type} {quote}</div><div class="row"><button class="btn p" data-a="tsave">Save</button><button class="btn" data-a="tdup">Duplicate</button><button class="btn d" data-a="tdel">Delete</button></div></div></div>`;
-      }
-      h += `</div>`;
-      return h;
-    }
-
-    // ===== BINDINGS =====
-    function bindSend() {
-      const q = document.getElementById('ms-seg');
-      if (q) q.onchange = e => { MS.seg = e.target.value; MS.off = new Set(); MS.sent = {}; render(); };
-      const tpl = document.getElementById('ms-tpl');
-      if (tpl) tpl.onchange = e => { msPick(+e.target.value); render(); };
-      const raw = document.getElementById('ms-raw');
-      if (raw) raw.oninput = e => { MS.raw = e.target.value; msRefresh(true); };
-      const txt = document.getElementById('ms-text');
-      if (txt) txt.oninput = e => { MS.text = e.target.value; msRefresh(); };
-      const sub = document.getElementById('ms-sub');
-      if (sub) sub.oninput = e => { MS.sub = e.target.value; msRefresh(); };
-      document.querySelectorAll('.ms-chk').forEach(chk => {
-        chk.onchange = e => { const id = +e.target.dataset.id; e.target.checked ? MS.off.delete(id) : MS.off.add(id); msRefresh(); };
-      });
-      document.querySelectorAll('[data-remove-chip]').forEach(btn => {
-        btn.onclick = e => { MS.raw = MS.raw.split(/[\n,]+/).map(s => s.trim()).filter(v => v !== e.target.dataset.removeChip).join(', '); msRefresh(true); };
-      });
-    }
-
-    function msRefresh(all) {
-      const a = document.getElementById('ms-chips'), b = document.getElementById('ms-list'), c = document.getElementById('ms-bar');
-      if (all) { if (a) a.innerHTML = msChips(); if (b) b.innerHTML = msList(); }
-      if (c) c.innerHTML = msBar();
-    }
-
-    function msPick(i) {
-      MS.k = i;
-      if (i >= 0) {
-        const c = CT[i];
-        MS.text = c.t;
-        if (c.ch === 'em') MS.sub = c.sub || '';
-      }
-    }
-
-    // ===== TEMPLATE BINDINGS =====
-    const TS = { tab: 'wa', i: 0 };
-    function bindTemplates() {
-      // tsel, ttab handled via global A
-    }
-
-    // ===== ACTIVITY BINDINGS =====
-    function bindActivity() { }
-
-    // ===== ACTIONS =====
-    window.A = {
-      mstab: (i) => { MS.tab = ['send', 'act', 'tpl'][i]; render(); },
-      msch: (i) => { const c = i ? 'em' : 'wa'; if (c !== MS.ch) { MS.ch = c; MS.sent = {}; msPick(-1); } render(); },
-      msall: (i) => { MS.off = new Set(i ? [] : msBase().map(u => u.id)); render(); },
-      msreset: () => { MS.sent = {}; render(); },
-      mscopy: () => { const R = msRecips(); navigator.clipboard?.writeText(R.list.map(r => MS.ch === 'wa' ? r.mobile : r.email).join(MS.ch === 'wa' ? '\n' : ', ')); toast('Copied ' + R.list.length); },
-      msgo: async () => {
-        const R = msRecips(), todo = R.list.filter(x => !MS.sent[msKey(x)]);
-        if (!todo.length) return;
-        const c = MS.k >= 0 ? CT[MS.k] : null, wa = MS.ch === 'wa', chn = wa ? 'WhatsApp' : 'Email', subj = wa ? (c ? c.n : 'Custom message') : MS.sub;
-        if (wa) {
-          const r = todo[0], t = msText(r);
-          window.open('https://wa.me/91' + r.mobile + '?text=' + encodeURIComponent(t), '_blank');
-          MS.sent[msKey(r)] = 1;
-          logComm(r.u, chn, { mobile: r.mobile, email: r.email, name: r.name }, subj, t, 'Sent');
-          toast('WhatsApp opened for ' + (r.name || r.mobile));
-        } else {
-          const b = todo.slice(0, 30);
-          window.open('https://mail.google.com/mail/?view=cm&fs=1&bcc=' + encodeURIComponent(b.map(r => r.email).join(',')) + '&su=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(MS.text), '_blank');
-          b.forEach(r => { MS.sent[msKey(r)] = 1; logComm(r.u, chn, { mobile: r.mobile, email: r.email, name: r.name }, subj, MS.text, 'Sent'); });
-          toast('Gmail opened for ' + b.length + ' recipients');
-        }
-        msRefresh();
-      },
-      msmail: () => { const R = msRecips(), left = R.list.filter(x => !MS.sent[msKey(x)]); if (!left.length) return; navigator.clipboard?.writeText(left.map(r => r.email).join(', ')); toast('Copied ' + left.length + ' emails'); },
-      // Template actions
-      ttab: (i) => { TS.tab = ['wa', 'em', 'sm'][i]; render(); },
-      tsel: (i) => { TS.i = i; render(); },
-      tnew: () => {
-        openModal('New ' + (TS.tab === 'wa' ? 'WhatsApp' : 'Email') + ' template', `<div class="fg"><div><label>Template name<input class="in" name="name" required></label></div>${TS.tab === 'em' ? `<div><label>Email subject<input class="in" name="subject"></label></div>` : ''}<div class="w"><label>Message<textarea class="in" name="body" rows="10" required></textarea></label></div></div>`, async (data, modal) => {
-          const fd = new FormData(); fd.append('name', data.name); fd.append('channel', TS.tab); fd.append('body', data.body); if (data.subject) fd.append('subject', data.subject); fd.append('_token', document.querySelector('meta[name="csrf-token"]').content);
-          const res = await fetch('{{ route("admin.messages.templates.store") }}', { method: 'POST', body: fd, credentials: 'same-origin' });
-          if (res.ok) { modal.remove(); toast('Template created'); render(); } else { alert('Error creating template'); }
-        });
-      },
-      tsave: () => {
-        const c = CT[TS.i];
-        const fd = new FormData(); fd.append('name', document.getElementById('tn').value); fd.append('body', document.getElementById('tt').value); const ts = document.getElementById('ts'); if (ts) fd.append('subject', ts.value); fd.append('_token', document.querySelector('meta[name="csrf-token"]').content); fd.append('_method', 'PUT');
-        const url = '{{ route("admin.messages.templates.update", ["id" => "__ID__"]) }}'
-            .replace('__ID__', c.id);
-
-        fetch(url, {
-            method: 'POST',
-            body: fd,
-            credentials: 'same-origin'
-        }).then(r => {
-            if (r.ok) {
-                toast('Saved');
-                render();
-            } else {
-                alert('Error saving');
-            }
-        });
-      },
-      tdup: () => {
-        const c = CT[TS.i];
-        const fd = new FormData(); fd.append('id', c.id); fd.append('_token', document.querySelector('meta[name="csrf-token"]').content);
-        fetch('{{ route("admin.messages.templates.duplicate") }}', { method: 'POST', body: fd, credentials: 'same-origin' }).then(r => { if (r.ok) { toast('Duplicated'); render(); } else alert('Error'); });
-      },
-      tdel: () => {
-        const c = CT[TS.i]; if (!confirm('Delete "' + c.n + '"?')) return;
-        const fd = new FormData(); fd.append('id', c.id); fd.append('_token', document.querySelector('meta[name="csrf-token"]').content);
-        fetch('{{ route("admin.messages.templates.delete") }}', { method: 'POST', body: fd, credentials: 'same-origin' }).then(r => { if (r.ok) { toast('Deleted'); render(); } else alert('Error'); });
-      },
-      // Stage mapping
-      // Handled via change event on selects
-      // Scheduled messages
-      ssend: (id) => {
-        const fd = new FormData(); fd.append('id', id); fd.append('_token', document.querySelector('meta[name="csrf-token"]').content);
-        fetch('{{ route("admin.messages.scheduled.send") }}', { method: 'POST', body: fd, credentials: 'same-origin' }).then(r => { if (r.ok) { toast('Sent'); render(); } else alert('Error'); });
-      },
-      sdel: (id) => {
-        if (!confirm('Cancel this scheduled message?')) return;
-        const fd = new FormData(); fd.append('id', id); fd.append('_token', document.querySelector('meta[name="csrf-token"]').content);
-        fetch('{{ route("admin.messages.scheduled.cancel") }}', { method: 'POST', body: fd, credentials: 'same-origin' }).then(r => { if (r.ok) { toast('Cancelled'); render(); } else alert('Error'); });
-      },
-      // Exports
-      xlm: async () => {
-        const params = new URLSearchParams(window.location.search);
-        const res = await fetch('{{ route("admin.messages.export.logs") }}?' + params.toString(), { credentials: 'same-origin' });
-        const data = await res.json();
-        if (data.sheets) await xlsx(data.filename, data.sheets);
-        else alert('Export failed');
-      },
-      xlt: async () => {
-        const res = await fetch('{{ route("admin.messages.export.templates") }}', { credentials: 'same-origin' });
-        const data = await res.json();
-        if (data.sheets) await xlsx(data.filename, data.sheets);
-        else alert('Export failed');
-      },
-    };
-
-    // Stage mapping change handler
-    document.addEventListener('change', e => {
-      const m = e.target.dataset.sm;
-      if (m) {
-        const [s, ch] = m.split('|');
-        const fd = new FormData(); fd.append('stage_mapping', JSON.stringify({ ...STAGE_MAPPING, [s]: { ...(STAGE_MAPPING[s] || {}), [ch]: e.target.value } })); fd.append('_token', document.querySelector('meta[name="csrf-token"]').content);
-        fetch('{{ route("admin.messages.stage-mapping") }}', { method: 'POST', body: fd, credentials: 'same-origin' }).then(r => { if (r.ok) toast('Saved'); else alert('Error'); });
-      }
-    });
-
-    // Log communication to server
-    async function logComm(user, channel, recipient, subject, body, status) {
-      const fd = new FormData();
-      fd.append('channel', channel.toLowerCase().startsWith('w') ? 'wa' : 'em');
-      fd.append('recipient', JSON.stringify(recipient));
-      fd.append('subject', subject);
-      fd.append('body', body);
-      fd.append('status', status);
-      fd.append('_token', document.querySelector('meta[name="csrf-token"]').content);
-      if (user?.id) fd.append('user_id', user.id);
-      await fetch('{{ route("admin.messages.send") }}', { method: 'POST', body: fd, credentials: 'same-origin' });
-    }
-
-    function msText(r) {
-      let t = MS.text;
-      const fn = (r.name || '').split(' ')[0] || 'Friend';
-      t = t.replace(/{name}/g, r.name || '').replace(/{friend}/g, fn).replace(/{link}/g, 'https://retirementplankaro.com');
-      return t;
-    }
-
-    // Delegated event handler for all data-a actions
+    // Add chip removal handlers
     document.addEventListener('click', e => {
-      const btn = e.target.closest('[data-a]');
-      if (!btn) return;
-      const action = btn.dataset.a;
-      const arg = btn.dataset.i !== undefined ? +btn.dataset.i : btn.dataset.id;
-      if (window.A && typeof window.A[action] === 'function') {
-        window.A[action](arg);
+      if (e.target.matches('[data-remove-chip]')) {
+        const v = e.target.dataset.removeChip;
+        const raw = document.getElementById('ms-raw');
+        if (raw) {
+          raw.value = raw.value.split(/[\n,]+/).map(s => s.trim()).filter(x => x !== v).join(', ');
+          raw.dispatchEvent(new Event('input'));
+        }
       }
     });
 
-    // Initial render
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', render);
-    } else {
-      render();
-    }
+    // Checkbox handlers for recipient selection
+    document.addEventListener('change', e => {
+      if (e.target.matches('.ms-chk')) {
+        const form = e.target.closest('form');
+        if (form) form.submit();
+      }
+    });
+
+    // Segment change handler
+    document.addEventListener('change', e => {
+      if (e.target.matches('#ms-seg')) {
+        e.target.closest('form').submit();
+      }
+    });
+
+    // Template select change
+    document.addEventListener('change', e => {
+      if (e.target.matches('#ms-tpl')) {
+        const idx = +e.target.value;
+        if (idx >= 0 && window.CT && CT[idx]) {
+          const c = CT[idx];
+          document.getElementById('ms-text').value = c.t;
+          if (c.ch === 'em') {
+            const sub = document.getElementById('ms-sub');
+            if (sub) sub.value = c.sub || '';
+          }
+        }
+      }
+    });
+
+    // Stage mapping change
+    document.addEventListener('change', e => {
+      if (e.target.matches('[data-sm]')) {
+        const form = e.target.closest('form');
+        if (form) form.submit();
+      }
+    });
+
+    // Handle "Select all/none" buttons
+    document.addEventListener('click', e => {
+      if (e.target.matches('[data-msall]')) {
+        const selectAll = e.target.dataset.msall === '1';
+        document.querySelectorAll('.ms-chk').forEach(chk => {
+          if (!chk.disabled) chk.checked = selectAll;
+        });
+        // Trigger change on first checkbox to submit form
+        const first = document.querySelector('.ms-chk:not(:disabled)');
+        if (first) first.dispatchEvent(new Event('change'));
+      }
+    });
   </script>
 @endpush
 
@@ -1007,11 +713,124 @@
     </div>
   </div>
 
-  <!-- Tabs -->
-  <div class="stab" id="ms-tabs"></div>
+  @php
+    // Build users array with computed fields for Blade
+    $wa = $channel === 'wa';
+    $seg = request()->query('segment', 'all');
+    $fixed = request()->query('fixed') ? json_decode(request()->query('fixed'), true) : [];
 
-  <!-- Main content -->
-  <div id="m"></div>
+    // Build base recipient list
+    function buildBaseList($users, $seg, $fixed)
+    {
+      if ($seg === '__fixed') {
+        return $users->whereIn('id', $fixed)->values();
+      }
+      if ($seg === 'new_only') {
+        return collect();
+      }
+      if (Str::startsWith($seg, 'stage_')) {
+        return $users->where('stage', Str::after($seg, 'stage_'))->values();
+      }
+      $list = $users;
+      if ($seg === 'paid')
+        $list = $list->whereIn('stage', ['Paid report', 'Wallet active']);
+      if ($seg === 'unpaid')
+        $list = $list->whereIn('stage', ['Payment failed', 'Payment pending']);
+      if ($seg === 'wallet')
+        $list = $list->where('stage', 'Wallet active');
+      if ($seg === 'leads')
+        $list = $list->where('stage', 'Signed up');
+      return $list->values();
+    }
+
+    $baseUsers = buildBaseList($users, $seg, $fixed);
+
+    // Filter by channel (must have mobile/email)
+    $hasContact = $wa ? 'mobile' : 'email';
+    $validUsers = $baseUsers->filter(fn($u) => !empty($u->{$hasContact}));
+
+    // Build raw extras
+    $raw = request()->query('raw', '');
+    $chips = array_filter(array_map('trim', preg_split('/[\n,]+/', $raw)));
+    $extras = collect();
+    foreach ($chips as $chip) {
+      $val = $wa ? $chip : $chip;
+      $exists = $validUsers->contains(fn($u) => $wa ? $u->mobile === $val : $u->email === $val);
+      if (!$exists) {
+        $extras->push([
+          'name' => $wa ? '' : (str_contains($val, '@') ? explode('@', $val)[0] : $val),
+          'mobile' => $wa ? $val : '',
+          'email' => $wa ? '' : $val,
+          'isNew' => true,
+          'extra' => true,
+          'bad' => !$val,
+        ]);
+      }
+    }
+
+    // Combine
+    $recipients = $validUsers->map(function ($u) {
+      return [
+        'u' => $u,
+        'name' => $u->name,
+        'mobile' => $u->mobile,
+        'email' => $u->email,
+        'isNew' => false,
+        'extra' => false,
+        'bad' => false,
+        'off' => false,
+      ];
+    })->concat($extras)->values();
+
+    // Sent tracking from query
+    $sentIds = request()->query('sent', []);
+    if (is_string($sentIds))
+      $sentIds = json_decode($sentIds, true) ?? [];
+    $sentKey = fn($r) => ($r['u']->id ?? 'new') . '|' . ($wa ? ($r['mobile'] ?? '') : ($r['email'] ?? ''));
+    $sentCount = 0;
+    foreach ($recipients as $r) {
+      if (in_array($sentKey($r), $sentIds))
+        $sentCount++;
+    }
+    $leftCount = count($recipients) - $sentCount;
+  @endphp
+
+  <!-- Tabs -->
+  <div class="stab">
+    <a href="{{ route('admin.messages', array_merge(
+    ['tab' => 'send', 'channel' => $channel],
+    request()->except(['tab', 'channel'])
+  )) }}" class="{{ $tab === 'send' ? 'on' : '' }}">
+      Send
+    </a>
+
+    <a href="{{ route('admin.messages', array_merge(
+    ['tab' => 'act', 'channel' => $channel],
+    request()->except(['tab', 'channel'])
+  )) }}" class="{{ $tab === 'act' ? 'on' : '' }}">
+      Activity
+      {!! $scheduled->where('done', false)->where('scheduled_at', '<=', now())->count()
+    ? '<span class="pill bad">' . $scheduled->where('done', false)->where('scheduled_at', '<=', now())->count() . '</span>'
+    : '' !!}
+    </a>
+
+    <a href="{{ route('admin.messages', array_merge(
+    ['tab' => 'tpl', 'channel' => $channel],
+    request()->except(['tab', 'channel'])
+  )) }}" class="{{ $tab === 'tpl' ? 'on' : '' }}">
+      Templates
+    </a>
+  </div>
+
+  <div id="m">
+    @if($tab === 'send')
+      @include('admin.messages._send')
+    @elseif($tab === 'act')
+      @include('admin.messages._activity')
+    @elseif($tab === 'tpl')
+      @include('admin.messages._templates')
+    @endif
+  </div>
 
   <div class="tt" id="tt"></div>
 @endsection

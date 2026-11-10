@@ -150,6 +150,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Messages & Email (Client Communications)
         Route::get('messages', [AdminMessageController::class, 'index'])->name('messages');
+        Route::get('messages/templates/create', [AdminMessageController::class, 'createTemplate'])->name('messages.templates.create');
         Route::post('messages/templates', [AdminMessageController::class, 'storeTemplate'])->name('messages.templates.store');
         Route::put('messages/templates/{id}', [AdminMessageController::class, 'updateTemplate'])->name('messages.templates.update');
         Route::delete('messages/templates', [AdminMessageController::class, 'deleteTemplate'])->name('messages.templates.delete');

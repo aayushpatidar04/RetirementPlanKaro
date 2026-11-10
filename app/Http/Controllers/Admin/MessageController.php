@@ -19,6 +19,7 @@ class MessageController extends Controller
     {
         $tab = $request->query('tab', 'send'); // send, act, tpl
         $channel = $request->query('channel', 'wa'); // wa, em
+        $newTemplate = $request->boolean('new_template');
 
         // Get templates
         $waTemplates = MessageTemplate::where('channel', 'wa')->orderBy('name')->get();
@@ -57,6 +58,7 @@ class MessageController extends Controller
         return view('admin.messages', compact(
             'tab',
             'channel',
+            'newTemplate',
             'waTemplates',
             'emTemplates',
             'users',
@@ -65,6 +67,11 @@ class MessageController extends Controller
             'scheduled',
             'stageMapping'
         ));
+    }
+
+    public function createTemplate(Request $request): View
+    {
+        return $this->index($request->merge(['tab' => 'tpl', 'tpl_tab' => $request->query('channel', 'wa'), 'new_template' => true]));
     }
 
     // ===== TEMPLATES =====
