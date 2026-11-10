@@ -330,25 +330,25 @@
     }
 
     async function exportQuotes() {
-      const rows = Array.from(document.querySelectorAll('#quotes-table tbody tr')).map(tr => {
-        const t = tr.querySelectorAll('td'); if (!t.length) return null;
-        return [
-          t[0].innerText.trim(),
-          t[1].innerText.trim(),
-          t[2].innerText.trim(),
-          t[3].innerText.trim(),
-          t[4].innerText.trim(),
-          t[5].innerText.trim(),
-          // t[6].innerText.trim(),
-        ];
-      }).filter(Boolean);
+      const quotes = @json($quotes->items());
+      const rows = quotes.map(q => [
+        q.created_at ? new Date(q.created_at).toLocaleString('en-IN', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true}) : '',
+        q.customer_name || '',
+        q.customer_email || '',
+        q.customer_mobile || '',
+        q.customer_city || '',
+        q.product_type || '',
+        (q.details || []).map(d => (d[0]||'')+': '+(d[1]||'')).join(' · '),
+        q.status || '',
+        q.note || ''
+      ]);
       const sub = 'Retirement Plan Karo · ' + new Date().toLocaleDateString('en-IN') + ' · {{ $quotes->total() }} records' +
         (@json($productType) ? ' · Product: ' + @json($productType) : '') +
         (@json($status) ? ' · Status: ' + @json($status) : '') +
         (@json($from) || @json($to) ? ' · ' + (@json($from) || 'start') + ' to ' + (@json($to) || 'today') : '');
       await xlsx('Quotes_' + (@json($from) || 'start') + '_to_' + (@json($to) || 'today') + '.xlsx', [{
         name: 'Quote Requests', title: 'Quote Requests', sub,
-        head: ['Date', 'Customer', 'Mobile', 'Product', 'Key Details', 'Status'],
+        head: ['Date', 'Customer', 'Email', 'Mobile', 'City', 'Product', 'Key Details', 'Status', 'Notes'],
         rows
       }]);
     }
