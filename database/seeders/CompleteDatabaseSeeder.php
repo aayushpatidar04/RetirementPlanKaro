@@ -7,6 +7,7 @@ use App\Models\CommunicationLog;
 use App\Models\Coupon;
 use App\Models\CouponRedemption;
 use App\Models\GuidanceSession;
+use App\Models\InvestmentPartner;
 use App\Models\MessageTemplate;
 use App\Models\Payment;
 use App\Models\QuoteRequest;
@@ -739,6 +740,9 @@ class CompleteDatabaseSeeder extends Seeder
             ], JSON_UNESCAPED_UNICODE)]
         );
 
+        // Seed investment partners
+        $this->call(InvestmentPartnerSeeder::class);
+
         DB::table('settings')->updateOrInsert(
             ['key' => 'message_stage_mapping'],
             ['value' => json_encode([
@@ -769,5 +773,6 @@ class CompleteDatabaseSeeder extends Seeder
         $this->command->info('Assets: ' . DB::table('assets')->count());
         $this->command->info('Liabilities: ' . DB::table('liabilities')->count());
         $this->command->info('Life Goals: ' . DB::table('life_goals')->count());
+        $this->command->info('Investment Partners: ' . InvestmentPartner::count());
     }
 }

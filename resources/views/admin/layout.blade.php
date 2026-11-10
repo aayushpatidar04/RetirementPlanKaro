@@ -507,7 +507,7 @@
       <summary class="ngh">Pricing & Incentives <span class="chev">▾</span></summary>
       <a href="{{ route('admin.coupons') }}" class="nsub {{ request()->routeIs('admin.coupons') ? 'on' : '' }}">Discount
         codes</a>
-      <a href="#" class="nsub">Investment Partners</a>
+      <a href="{{ route('admin.investment-partners') }}" class="nsub {{ request()->routeIs('admin.investment-partners') ? 'on' : '' }}">Investment Partners</a>
     </details>
 
     <details class="nav-group" {{ 

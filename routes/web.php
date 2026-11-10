@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\CouponController as AdminCouponController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\InvestmentPartnerController as AdminInvestmentPartnerController;
 use App\Http\Controllers\Admin\LeadController as AdminLeadController;
 use App\Http\Controllers\Admin\MessageController as AdminMessageController;
 use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
@@ -130,10 +131,21 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('sessions/availability', [AdminSessionController::class, 'saveAvailability'])->name('sessions.availability');
         Route::post('sessions/{id}', [AdminSessionController::class, 'update'])->name('sessions.update');
         Route::post('sessions/{id}/status', [AdminSessionController::class, 'status'])->name('sessions.status');
-        Route::get('coupons', [AdminCouponController::class, 'index'])->name('coupons');
+Route::get('coupons', [AdminCouponController::class, 'index'])->name('coupons');
         Route::post('coupons', [AdminCouponController::class, 'store'])->name('coupons.store');
         Route::post('coupons/{id}/toggle', [AdminCouponController::class, 'toggle'])->name('coupons.toggle');
         Route::post('coupons/{id}/delete', [AdminCouponController::class, 'destroy'])->name('coupons.delete');
+
+        // Investment Partners
+        Route::get('investment-partners', [AdminInvestmentPartnerController::class, 'index'])->name('investment-partners');
+        Route::post('investment-partners', [AdminInvestmentPartnerController::class, 'store'])->name('investment-partners.store');
+        Route::put('investment-partners/{id}', [AdminInvestmentPartnerController::class, 'update'])->name('investment-partners.update');
+        Route::delete('investment-partners', [AdminInvestmentPartnerController::class, 'destroy'])->name('investment-partners.delete');
+        Route::post('investment-partners/duplicate', [AdminInvestmentPartnerController::class, 'duplicate'])->name('investment-partners.duplicate');
+        Route::post('investment-partners/move-up', [AdminInvestmentPartnerController::class, 'moveUp'])->name('investment-partners.move-up');
+        Route::post('investment-partners/move-down', [AdminInvestmentPartnerController::class, 'moveDown'])->name('investment-partners.move-down');
+        Route::get('investment-partners/export', [AdminInvestmentPartnerController::class, 'export'])->name('investment-partners.export');
+
         Route::get('quotes', [AdminQuoteController::class, 'index'])->name('quotes');
         Route::post('quotes', [AdminQuoteController::class, 'store'])->name('quotes.store');
         Route::put('quotes/{id}', [AdminQuoteController::class, 'update'])->name('quotes.update');
