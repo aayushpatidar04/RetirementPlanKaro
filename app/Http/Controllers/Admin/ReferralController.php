@@ -112,20 +112,19 @@ class ReferralController extends Controller
     public function saveSettings(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'on' => 'nullable|boolean',
+            'on' => 'nullable|string|in:0,1',
             'bonus' => 'nullable|integer|min:0',
             'friend' => 'nullable|integer|min:0',
-            'verify' => 'nullable|boolean',
+            'verify' => 'nullable|string|in:0,1',
             'max' => 'nullable|integer|min:0',
             'base' => 'nullable|string|max:255',
             'msg' => 'nullable|string|max:500',
         ]);
-
         $settings = [
-            'on' => $request->boolean('on'),
+            'on' => $data['on'] === '1',
             'bonus' => (int) ($data['bonus'] ?? 100),
             'friend' => (int) ($data['friend'] ?? 0),
-            'verify' => $request->boolean('verify'),
+            'verify' => $request->verify === '1' ? '1' : '0',
             'max' => $data['max'] !== '' ? (int) $data['max'] : '',
             'base' => (string) ($data['base'] ?? config('app.url')),
             'msg' => (string) ($data['msg'] ?? ''),
@@ -189,7 +188,7 @@ class ReferralController extends Controller
             'name' => 'required|string|max:100',
             'code' => 'required|string|max:50',
             'target' => 'required|string|max:100',
-            'on' => 'nullable|boolean',
+            'on' => 'nullable|string|in:0,1',
         ]);
 
         $links = $this->getCampaignLinks();
@@ -207,7 +206,7 @@ class ReferralController extends Controller
             'target' => $data['target'],
             'clicks' => 0,
             'signups' => 0,
-            'on' => $request->boolean('on'),
+            'on' => $data['on'] === '1',
         ];
 
         Settings::set('referral_campaign_links', json_encode($links, JSON_UNESCAPED_UNICODE));
@@ -223,7 +222,7 @@ class ReferralController extends Controller
             'name' => 'required|string|max:100',
             'code' => 'required|string|max:50',
             'target' => 'required|string|max:100',
-            'on' => 'nullable|boolean',
+            'on' => 'nullable|string|in:0,1',
         ]);
 
         $links = $this->getCampaignLinks();
@@ -247,7 +246,7 @@ class ReferralController extends Controller
             'target' => $data['target'],
             'clicks' => $links[$index]['clicks'] ?? 0,
             'signups' => $links[$index]['signups'] ?? 0,
-            'on' => $request->boolean('on'),
+            'on' => $data['on'] === '1',
         ];
 
         Settings::set('referral_campaign_links', json_encode($links, JSON_UNESCAPED_UNICODE));
