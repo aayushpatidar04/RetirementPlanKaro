@@ -140,14 +140,14 @@ class ReferralController extends Controller
     {
         $data = $request->validate([
             'id' => 'required|exists:users,id',
-            'code' => 'required|string|max:20|unique:users,code,' . $request->input('id'),
+            'referral_code' => 'required|string|max:20|unique:users,code,' . $request->input('id'),
         ]);
 
         $user = User::findOrFail($data['id']);
-        $oldCode = $user->code;
-        $newCode = strtoupper(trim($data['code']));
+        $oldCode = $user->referral_code;
+        $newCode = strtoupper(trim($data['referral_code']));
 
-        $user->update(['code' => $newCode]);
+        $user->update(['referral_code' => $newCode]);
 
         Activity::log(
             $user->id,
