@@ -1,11 +1,14 @@
 @php
-  $logs = $logsQuery->items();
-  $scheduledItems = $scheduled->items();
+  use Illuminate\Support\Carbon;
+  $who = function ($r) {
+    $r = (array) $r;
+    return ($r['name'] ?? '') ?: (($r['mobile'] ?? '') ?: ($r['email'] ?? ''));
+  };
 @endphp
 
-@if($scheduledItems->where('done', false)->isNotEmpty())
+@if($pending->isNotEmpty())
   <div class="card">
-    <h3>Scheduled · {{ $scheduledItems->where('done', false)->count() }} pending{{ $scheduledItems->where('done', false)->where('scheduled_at', '<=', now())->count() ? ' · ' . $scheduledItems->where('done', false)->where('scheduled_at', '<=', now())->count() . ' due now' : '' }}</h3>
+    <h3>Scheduled · {{ $pending->count() }} pending{{ $dueCount ? ' · ' . $dueCount . ' due now' : '' }}</h3>
     <div class="sc">
       <table>
         <thead>
@@ -19,30 +22,30 @@
           </tr>
         </thead>
         <tbody>
-          @foreach($scheduledItems->where('done', false) as $x)
+          @foreach($pending as $x)
+            @php $due = Carbon::parse($x->scheduled_at)->lte(now()); @endphp
             <tr>
-              <td>{{ $x->scheduled_at ? \Carbon\Carbon::parse($x->scheduled_at)->format('d M Y H:i') : '' }}</td>
-              <td><span class="pill {{ $x->ch === 'wa' ? 'ok' : 'pri' }}">{{ $x->ch === 'wa' ? 'WhatsApp' : 'Email' }}</span></td>
-              <td>{{ $x->recipient['name'] ?? $x->recipient['mobile'] ?? $x->recipient['email'] ?? '' }}</td>
-              <td>{{ $x->subject ?? '' }}</td>
-              <td>
-                @if(new \Carbon\Carbon($x->scheduled_at) <= now())
-                  <span class="pill bad">Due now</span>
-                @else
-                  <span class="pill warn">Scheduled</span>
-                @endif
+              <td>{{ Carbon::parse($x->scheduled_at)->format('d M Y H:i') }}</td>
+              <td><span
+                  class="pill {{ $x->channel === 'wa' ? 'ok' : 'pri' }}">{{ $x->channel === 'wa' ? 'WhatsApp' : 'Email' }}</span>
               </td>
+              <td>{{ $who($x->recipient) }}</td>
+              <td>{{ $x->subject ?? '' }}</td>
+              <td><span class="pill {{ $due ? 'bad' : 'warn' }}">{{ $due ? 'Due now' : 'Scheduled' }}</span></td>
               <td>
                 <div class="row">
-                  <form method="POST" action="{{ route('admin.messages.scheduled.send') }}" class="inline">
+                  {{-- data-open: the chat/compose window opens first, then the form posts and logs it --}}
+                  <form method="POST" action="{{ route('admin.messages.scheduled.send') }}" class="inline" @if($x->open_url)
+                  data-open="{{ $x->open_url }}" @endif>
                     @csrf
                     <input type="hidden" name="id" value="{{ $x->id }}">
-                    <button type="submit" class="btn s p">Send now</button>
+                    <button type="submit" class="btn s p" @disabled(!$x->open_url)
+                      title="{{ $x->open_url ? '' : 'No valid contact' }}">Send now</button>
                   </form>
-                  <form method="POST" action="{{ route('admin.messages.scheduled.cancel') }}" class="inline" onsubmit="return confirm('Cancel this scheduled message?')">
+                  <form method="POST" action="{{ route('admin.messages.scheduled.cancel') }}" class="inline">
                     @csrf
                     <input type="hidden" name="id" value="{{ $x->id }}">
-                    <button type="submit" class="btn s d">Cancel</button>
+                    <button type="submit" class="btn s d" data-confirm="Cancel this scheduled message?">Cancel</button>
                   </form>
                 </div>
               </td>
@@ -55,9 +58,23 @@
 @endif
 
 <div class="card">
-  <h3>Sent messages · {{ $logs->count() }}</h3>
+  <h3>Sent messages · {{ $logsQuery->total() }}</h3>
+
+  <form method="GET" action="{{ route('admin.messages') }}" class="bar" style="padding:12px 16px 0">
+    <input type="hidden" name="tab" value="act">
+    <input class="in" type="date" name="from" value="{{ request('from') }}" style="width:auto" title="From">
+    <input class="in" type="date" name="to" value="{{ request('to') }}" style="width:auto" title="To">
+    <select class="in" name="log_channel" style="width:auto">
+      <option value="">All channels</option>
+      <option value="wa" @selected(request('log_channel') === 'wa')>WhatsApp</option>
+      <option value="em" @selected(request('log_channel') === 'em')>Email</option>
+    </select>
+    <button class="btn p" type="submit">Filter</button>
+    <a class="btn" href="{{ route('admin.messages', ['tab' => 'act']) }}">Reset</a>
+  </form>
+
   <div class="sc">
-    @if($logs->isEmpty())
+    @if($logsQuery->isEmpty())
       <div class="em">No records</div>
     @else
       <table>
@@ -71,11 +88,13 @@
           </tr>
         </thead>
         <tbody>
-          @foreach($logs as $c)
+          @foreach($logsQuery as $c)
             <tr>
-              <td>{{ $c->sent_at ? \Carbon\Carbon::parse($c->sent_at)->format('d M Y H:i') : '' }}</td>
-              <td>{{ $c->recipient['name'] ?? $c->recipient['mobile'] ?? $c->recipient['email'] ?? '' }}</td>
-              <td><span class="pill {{ $c->channel === 'wa' ? 'ok' : 'pri' }}">{{ $c->channel === 'wa' ? 'WhatsApp' : 'Email' }}</span></td>
+              <td>{{ $c->sent_at ? Carbon::parse($c->sent_at)->format('d M Y H:i') : '' }}</td>
+              <td>{{ $who($c->recipient) }}</td>
+              <td><span
+                  class="pill {{ $c->channel === 'wa' ? 'ok' : 'pri' }}">{{ $c->channel === 'wa' ? 'WhatsApp' : 'Email' }}</span>
+              </td>
               <td>{{ $c->subject ?? '' }}</td>
               <td><span class="pill {{ $c->status === 'sent' ? 'ok' : 'bad' }}">{{ $c->status }}</span></td>
             </tr>
@@ -85,18 +104,19 @@
     @endif
   </div>
 
-  {{-- Pagination --}}
   @if($logsQuery->hasPages())
-    <div style="padding:12px 16px;display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap">
-      {{ $logsQuery->appends(request()->except('page'))->links() }}
-    </div>
+    <div style="padding:12px 16px;display:flex;justify-content:center">{{ $logsQuery->links() }}</div>
   @endif
 
-  {{-- Export --}}
-  <div class="ac" style="margin:12px 16px 0;border-top:1px solid var(--line);padding-top:12px">
-    <a href="{{ route('admin.messages.export.logs', request()->query()) }}" class="btn p">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+  <div class="ac" style="margin:12px 16px;border-top:1px solid var(--line);padding-top:12px">
+    <button type="button" class="btn p"
+      data-export="{{ route('admin.messages.export.logs', request()->only('from', 'to', 'log_channel')) }}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <polyline points="7 10 12 15 17 10" />
+        <line x1="12" y1="15" x2="12" y2="3" />
+      </svg>
       Export Logs
-    </a>
+    </button>
   </div>
 </div>

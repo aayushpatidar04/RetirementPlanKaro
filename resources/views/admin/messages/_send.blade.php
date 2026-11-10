@@ -1,293 +1,330 @@
 @php
   $wa = $channel === 'wa';
-  $hasContact = $wa ? 'mobile' : 'email';
   $templates = $wa ? $waTemplates : $emTemplates;
-  $queryParams = request()->except(['tab', 'channel']);
-  $segment = request()->query('segment', 'all');
-  $sentIds = request()->query('sent', []);
-  if (is_string($sentIds))
-    $sentIds = json_decode($sentIds, true) ?? [];
-  $sentKey = fn($r) => ($r['u']->id ?? 'new') . '|' . ($wa ? ($r['mobile'] ?? '') : ($r['email'] ?? ''));
-  $left = $recipients->filter(fn($r) => !in_array($sentKey($r), $sentIds))->values();
-  $leftCount = $left->count();
-  $totalCount = $recipients->count();
-  $allSent = $totalCount > 0 && $leftCount === 0;
-  $canSend = $totalCount > 0 && $leftCount > 0;
-  $canSendEmail = $canSend && !$wa && (request()->filled('subject') || !request()->filled('subject'));
-  $canSendWa = $canSend && $wa;
+  $tplData = $templates->map(fn($t) => ['id' => $t->id, 'name' => $t->name, 'subject' => $t->subject, 'body' => $t->body])->values();
 @endphp
 
-<div class="card" style="margin:0">
-  <form method="GET" action="{{ route('admin.messages') }}">
-    <input type="hidden" name="tab" value="send">
-    <input type="hidden" name="channel" value="{{ $channel }}">
+<div class="card" id="send-app" data-wa="{{ $wa ? 1 : 0 }}" style="margin:0">
 
-    <!-- Step 1: Channel -->
-    <div class="ms-sec">
-      <div class="ms-h"><i>1</i>Send through</div>
-      <div class="tbs" style="margin:0">
-        <a href="{{ route('admin.messages', array_merge(['channel' => 'wa'], $queryParams)) }}"
-          class="{{ $wa ? 'on' : '' }}">WhatsApp</a>
-        <a href="{{ route('admin.messages', array_merge(['channel' => 'em'], $queryParams)) }}"
-          class="{{ !$wa ? 'on' : '' }}">Email</a>
-      </div>
+  {{-- Step 1: channel --}}
+  <div class="ms-sec">
+    <div class="ms-h"><i>1</i>Send through</div>
+    <div class="tbs" style="margin:0">
+      <a href="{{ route('admin.messages', ['tab' => 'send', 'channel' => 'wa', 'segment' => $segment, 'fixed' => $fixed ?: null]) }}"
+        class="{{ $wa ? 'on' : '' }}">WhatsApp</a>
+      <a href="{{ route('admin.messages', ['tab' => 'send', 'channel' => 'em', 'segment' => $segment, 'fixed' => $fixed ?: null]) }}"
+        class="{{ !$wa ? 'on' : '' }}">Email</a>
     </div>
+  </div>
 
-    <!-- Step 2: Recipients -->
-    <div class="ms-sec">
-      <div class="ms-h"><i>2</i>Who gets it? <small>Tick or untick people · or add new numbers / emails</small></div>
-      <div class="ms-row">
-        <select id="ms-seg" name="segment" onchange="this.form.submit()">
-          <option value="all" {{ $segment === 'all' ? 'selected' : '' }}>All customers</option>
-          <option value="paid" {{ $segment === 'paid' ? 'selected' : '' }}>Paid customers</option>
-          <option value="unpaid" {{ $segment === 'unpaid' ? 'selected' : '' }}>Unpaid / failed</option>
-          <option value="wallet" {{ $segment === 'wallet' ? 'selected' : '' }}>Wallet users</option>
-          <option value="leads" {{ $segment === 'leads' ? 'selected' : '' }}>Leads (signed up only)</option>
-          @if(count($fixed))
-            <optgroup label="Other">
-              <option value="__fixed" {{ $segment === '__fixed' ? 'selected' : '' }}>Leads you filtered
-                ({{ count($fixed) }})</option>
-            </optgroup>
-          @endif
-          <optgroup label="By lead stage">
-            @foreach($leadStages as $stage)
-              <option value="stage_{{ $stage }}" {{ $segment === 'stage_' . $stage ? 'selected' : '' }}>Stage · {{ $stage }}
-              </option>
-            @endforeach
-          </optgroup>
-          <optgroup label="Other">
-            <option value="new_only" {{ $segment === 'new_only' ? 'selected' : '' }}>Only new numbers / emails</option>
-          </optgroup>
-        </select>
-        <button type="button" class="btn s" data-msall="1">Select all</button>
-        <button type="button" class="btn s" data-msall="0">Select none</button>
-      </div>
+  {{-- Step 2: recipients --}}
+  <div class="ms-sec">
+    <div class="ms-h"><i>2</i>Who gets it? <small>Tick or untick people · or add new
+        {{ $wa ? 'numbers' : 'emails' }}</small></div>
 
-      <div class="ms-list sc">
-        @if($recipients->isEmpty())
-          <div class="em">No recipients yet — choose a group above or add numbers below.</div>
-        @else
-          <table>
-            <thead>
-              <tr>
-                <th></th>
-                <th>Name</th>
-                <th>{{ $wa ? 'WhatsApp number' : 'Email ID' }}</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              @foreach($recipients as $r)
-                <tr>
-                  <td>
-                    @if($r['extra'])
-                      <span title="Added by you"></span>
-                    @else
-                      <form method="GET" action="{{ route('admin.messages') }}" class="inline">
-                        <input type="hidden" name="tab" value="send">
-                        <input type="hidden" name="channel" value="{{ $channel }}">
-                        @foreach($queryParams as $k => $v)
-                          @if($k !== 'sent')
-                            <input type="hidden" name="{{ $k }}" value="{{ is_array($v) ? json_encode($v) : $v }}">
-                          @endif
-                        @endforeach
-                        <input type="hidden" name="segment" value="{{ $segment }}">
-                        <input type="hidden" name="raw" value="{{ request()->query('raw', '') }}">
-                        <input type="checkbox" class="ms-chk" name="off[{{ $r['u']->id }}]" value="1" {{ in_array($r['u']->id, request()->query('off', [])) ? 'checked' : '' }} onchange="this.form.submit()">
-                        <input type="hidden" name="sent" value="{{ json_encode($sentIds) }}">
-                      </form>
-                    @endif
-                  </td>
-                  <td>
-                    {{ $r['name'] ?: '—' }}
-                    @if($r['isNew'])
-                      <span class="pill pri">New</span>
-                    @endif
-                  </td>
-                  <td>
-                    @if($r['bad'])
-                      <span style="color:var(--bad)">{{ $wa ? 'no valid number' : 'no valid email' }}</span>
-                    @else
-                      {{ $wa ? $r['mobile'] : $r['email'] }}
-                    @endif
-                  </td>
-                  <td>
-                    @if(in_array($sentKey($r), $sentIds))
-                      <span class="pill ok">Sent</span>
-                    @endif
-                  </td>
-                </tr>
-              @endforeach
-            </tbody>
-          </table>
+    {{-- tiny GET form: ONLY changes the group. Everything else is handled in the browser --}}
+    <form method="GET" action="{{ route('admin.messages') }}" class="ms-row">
+      <input type="hidden" name="tab" value="send">
+      <input type="hidden" name="channel" value="{{ $channel }}">
+      @foreach($fixed as $fid)<input type="hidden" name="fixed[]" value="{{ $fid }}">@endforeach
+      <select name="segment" onchange="this.form.submit()">
+        <option value="all" @selected($segment === 'all')>All customers</option>
+        <option value="paid" @selected($segment === 'paid')>Paid customers</option>
+        <option value="unpaid" @selected($segment === 'unpaid')>Unpaid / failed</option>
+        <option value="wallet" @selected($segment === 'wallet')>Wallet users</option>
+        <option value="leads" @selected($segment === 'leads')>Leads (signed up only)</option>
+        @if(count($fixed))
+          <option value="__fixed" @selected($segment === '__fixed')>Leads you filtered ({{ count($fixed) }})</option>
         @endif
-      </div>
-
-      <div class="ms-add">
-        <b>Add new {{ $wa ? 'numbers' : 'emails' }} <span style="font-weight:500;color:var(--mut)">(people not in the
-            portal yet)</span></b>
-        <textarea id="ms-raw" name="raw" rows="3"
-          placeholder="{{ $wa ? '9876543210, 9123456789 — or one per line' : 'name@gmail.com, other@yahoo.com — or one per line' }}">{{ request()->query('raw', '') }}</textarea>
-        <div class="ms-chips">
-          @foreach(explode(',', request()->query('raw', '')) as $chip)
-            @php $chip = trim($chip); @endphp
-            @if($chip)
-              <span class="chip">{{ $chip }} <button type="button" data-remove-chip="{{ $chip }}">×</button></span>
-            @endif
+        <optgroup label="By lead stage">
+          @foreach($leadStages as $stage)
+            <option value="stage_{{ $stage }}" @selected($segment === 'stage_' . $stage)>Stage · {{ $stage }}</option>
           @endforeach
-        </div>
-        <div class="ms-note">You can paste {{ $wa ? 'numbers' : 'email IDs' }} in any format. They get this message too
-          — they are not saved as customers.</div>
-      </div>
+        </optgroup>
+        <option value="new_only" @selected($segment === 'new_only')>Only new {{ $wa ? 'numbers' : 'emails' }}</option>
+      </select>
+      <button type="button" class="btn s" id="sel-all">Select all</button>
+      <button type="button" class="btn s" id="sel-none">Select none</button>
+    </form>
+
+    <div class="ms-list sc">
+      <div class="em" id="rcpt-empty">No recipients yet — choose a group above or add {{ $wa ? 'numbers' : 'emails' }}
+        below.</div>
+      <table id="rcpt-table" style="display:none">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Name</th>
+            <th>{{ $wa ? 'WhatsApp number' : 'Email ID' }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="rcpt-body"></tbody>
+      </table>
     </div>
 
-    <!-- Step 3: Message -->
-    <div class="ms-sec">
-      <div class="ms-h"><i>3</i>Message</div>
-      <div class="ms-row" style="margin-bottom:10px">
-        <select id="ms-tpl" name="template_id" onchange="this.form.submit()">
-          <option value="-1" {{ request()->query('template_id', -1) == -1 ? 'selected' : '' }}>Write my own message
-          </option>
-          @foreach($templates as $t)
-            <option value="{{ $t->id }}" {{ request()->query('template_id') == $t->id ? 'selected' : '' }}>{{ $t->name }}
-            </option>
-          @endforeach
-        </select>
-      </div>
-      @if(!$wa)
-        <input type="text" id="ms-sub" name="subject" placeholder="Email subject"
-          value="{{ request()->query('subject', '') }}" style="margin-bottom:10px">
+    <div class="ms-add">
+      <b>Add new {{ $wa ? 'numbers' : 'emails' }} <span style="font-weight:500;color:var(--mut)">(people not in the
+          portal yet)</span></b>
+      <textarea id="raw" rows="3"
+        placeholder="{{ $wa ? '9876543210, 9123456789 — or one per line' : 'name@gmail.com, other@yahoo.com — or one per line' }}"></textarea>
+      <div class="ms-chips" id="chips"></div>
+      <div class="ms-note">Paste {{ $wa ? 'numbers (+91, spaces and 0 prefix are fine)' : 'email IDs' }}. They get this
+        message too — they are not saved as customers.</div>
+    </div>
+  </div>
+
+  {{-- Step 3: message --}}
+  <div class="ms-sec">
+    <div class="ms-h"><i>3</i>Message</div>
+    <div class="ms-row" style="margin-bottom:10px">
+      <select id="tpl">
+        <option value="-1">Write my own message</option>
+        @foreach($templates as $t)
+          <option value="{{ $t->id }}">
+            {{ $t->name }}{{ (string) $recommendedId === (string) $t->id ? '  ★ Recommended' : '' }}</option>
+        @endforeach
+      </select>
+    </div>
+    @unless($wa)
+      <input type="text" id="subject" placeholder="Email subject" style="margin-bottom:10px">
+    @endunless
+    <textarea id="body" rows="{{ $wa ? 7 : 11 }}" placeholder="Type your message here…"></textarea>
+    <div class="ms-note">
+      @if($wa)
+        <b>{friend}</b> = customer's first name, <b>{name}</b> = full name, <b>{link}</b> = website link. WhatsApp opens
+        one chat at a time — press <b>Send next</b> for each person.
+      @else
+        Email goes to everyone in BCC (they cannot see each other), so <b>{name}</b> / <b>{friend}</b> become "Friend".
+        Gmail opens {{ 30 }} people at a time.
       @endif
-      <textarea id="ms-text" name="body" rows="{{ $wa ? 7 : 11 }}"
-        placeholder="Type your message here…">{{ request()->query('body', '') }}</textarea>
-      <div class="ms-note">
-        {{ $wa ? '<b>Friend</b> is replaced by each customer\'s first name. WhatsApp opens one chat at a time — press <b>Send next</b> for each person.' : 'Email goes to everyone in BCC (they cannot see each other). Gmail opens 30 people at a time.' }}
-      </div>
     </div>
+  </div>
 
-    <!-- Bottom bar -->
-    <div class="ms-bar">
-      <div>
-        @if($totalCount)
-          <b>{{ $totalCount }}</b> {{ $wa ? 'WhatsApp numbers' : 'email IDs' }} ready
-          @if($totalCount > $leftCount)
-            · <span style="color:var(--ok)">{{ $totalCount - $leftCount }} sent</span>
-          @endif
-        @else
-          <span style="color:var(--mut)">Choose recipients to continue</span>
-        @endif
-      </div>
-      <div class="row" style="align-items:center">
-        @if($totalCount)
-          <a href="{{ route('admin.messages', array_merge(['tab' => 'send', 'channel' => $channel, 'sent' => '[]'], $queryParams)) }}"
-            class="btn link">Copy {{ $wa ? 'numbers' : 'emails' }}</a>
-        @endif
-
-        @if($allSent)
-          <span class="pill ok">All {{ $totalCount }} done</span>
-          <a href="{{ route('admin.messages', array_merge(['tab' => 'send', 'channel' => $channel, 'sent' => '[]', 'segment' => 'all'], array_except($queryParams, ['sent', 'segment']))) }}"
-            class="btn">Send another</a>
-        @elseif($wa && $canSend)
-          <form method="POST" action="{{ route('admin.messages.send') }}">
-            @csrf
-            <input type="hidden" name="channel" value="wa">
-            <input type="hidden" name="subject"
-              value="{{ request()->query('template_id', -1) != -1 ? $templates->firstWhere('id', request()->query('template_id'))->name ?? 'Custom message' : 'Custom message' }}">
-            <input type="hidden" name="body" value="{{ request()->query('body', '') }}">
-            <input type="hidden" name="template_id" value="{{ request()->query('template_id', '') }}">
-            @foreach($left as $r)
-              <input type="hidden" name="recipients[{{ $loop->index }}][user_id]" value="{{ $r['u']->id ?? '' }}">
-              <input type="hidden" name="recipients[{{ $loop->index }}][mobile]" value="{{ $r['mobile'] }}">
-              <input type="hidden" name="recipients[{{ $loop->index }}][email]" value="{{ $r['email'] }}">
-              <input type="hidden" name="recipients[{{ $loop->index }}][name]" value="{{ $r['name'] }}">
-            @endforeach
-            <button type="submit" class="btn wa lg" target="_blank"
-              formaction="https://wa.me/91{{ $left->first()['mobile'] }}?text={{ urlencode(str_replace('{friend}', explode(' ', $left->first()['name'] ?? '')[0] ?? 'Friend', str_replace('{name}', $left->first()['name'] ?? '', str_replace('{link}', 'https://retirementplankaro.com', request()->query('body', ''))))) }}">
-              {{ $leftCount < $totalCount ? 'Send next (' . $leftCount . ' left)' : 'Send on WhatsApp' . ($totalCount ? ' · ' . $totalCount : '') }}
-            </button>
-          </form>
-        @elseif(!$wa && $canSend)
-          <form method="POST" action="{{ route('admin.messages.send') }}" target="_blank">
-            @csrf
-            <input type="hidden" name="channel" value="em">
-            <input type="hidden" name="subject" value="{{ request()->query('subject', '') }}">
-            <input type="hidden" name="body" value="{{ request()->query('body', '') }}">
-            <input type="hidden" name="template_id" value="{{ request()->query('template_id', '') }}">
-            @foreach($left->take(30) as $r)
-              <input type="hidden" name="recipients[{{ $loop->index }}][user_id]" value="{{ $r['u']->id ?? '' }}">
-              <input type="hidden" name="recipients[{{ $loop->index }}][mobile]" value="{{ $r['mobile'] }}">
-              <input type="hidden" name="recipients[{{ $loop->index }}][email]" value="{{ $r['email'] }}">
-              <input type="hidden" name="recipients[{{ $loop->index }}][name]" value="{{ $r['name'] }}">
-            @endforeach
-            <button type="submit" class="btn p lg"
-              formaction="https://mail.google.com/mail/?view=cm&fs=1&bcc={{ urlencode($left->take(30)->pluck('email')->implode(',')) }}&su={{ urlencode(request()->query('subject', '')) }}&body={{ urlencode(request()->query('body', '')) }}">
-              {{ $leftCount > 30 ? 'Send to next 30 (' . $leftCount . ' left)' : 'Send Email' . ($totalCount ? ' · ' . $totalCount : '') }}
-            </button>
-          </form>
-          <a href="https://mail.google.com/mail/?view=cm&fs=1&bcc={{ urlencode($left->pluck('email')->implode(',')) }}&su={{ urlencode(request()->query('subject', '')) }}&body={{ urlencode(request()->query('body', '')) }}"
-            target="_blank" class="btn link">Use Mail app</a>
-        @else
-          <button class="btn p lg" disabled>{{ $wa ? 'Send on WhatsApp' : 'Send Email' }}</button>
-          @if(!$wa)
-            <a class="btn link" disabled>Use Mail app</a>
-          @endif
-        @endif
-      </div>
+  {{-- Bottom bar --}}
+  <div class="ms-bar">
+    <div id="summary" style="color:var(--mut)">Choose recipients to continue</div>
+    <div class="row">
+      <button type="button" class="btn link" id="copy">Copy {{ $wa ? 'numbers' : 'emails' }}</button>
+      <span class="sched">
+        <input type="datetime-local" id="when" title="Send later">
+        <button type="button" class="btn" id="schedule">Schedule</button>
+      </span>
+      @if($wa)
+        <button type="button" class="btn wa lg" id="send-main">Send on WhatsApp</button>
+      @else
+        <button type="button" class="btn p lg" id="send-main">Send Email</button>
+        <button type="button" class="btn" id="send-mailto">Use Mail app</button>
+      @endif
     </div>
-  </form>
+  </div>
 </div>
 
 @push('scripts')
   <script>
-    // Template auto-fill on select
-    document.addEventListener('change', e => {
-      if (e.target.matches('#ms-tpl')) {
-        const idx = +e.target.value;
-        if (idx >= 0 && window.CT && CT[idx]) {
-          const c = CT[idx];
-          document.getElementById('ms-text').value = c.t;
-          if (c.ch === 'em') {
-            const sub = document.getElementById('ms-sub');
-            if (sub) sub.value = c.sub || '';
-          }
-        }
-      }
-    });
+    (() => {
+      const WA = document.getElementById('send-app').dataset.wa === '1';
+      const BASE = @json($rows);
+      const TPL = @json($tplData);
+      const LINK = @json($siteLink);
+      const CHUNK = 30;
+      const $ = id => document.getElementById(id);
 
-    // Raw input handler - update chips display
-    document.addEventListener('input', e => {
-      if (e.target.matches('#ms-raw')) {
-        const chips = e.target.value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
-        const container = document.querySelector('.ms-chips');
-        if (container) {
-          container.innerHTML = chips.map(v => `<span class="chip">${v} <button type="button" data-remove-chip="${v}">×</button></span>`).join('');
-        }
-      }
-    });
+      const unchecked = new Set();   // keys the user unticked
+      const sent = new Set();        // keys already sent in this session
+      let extras = [];
+      let busy = false;
 
-    // Chip removal
-    document.addEventListener('click', e => {
-      if (e.target.matches('[data-remove-chip]')) {
-        const v = e.target.dataset.removeChip;
-        const raw = document.getElementById('ms-raw');
-        if (raw) {
-          raw.value = raw.value.split(/[\n,]+/).map(s => s.trim()).filter(x => x !== v).join(', ');
-          raw.dispatchEvent(new Event('input'));
-        }
-      }
-    });
+      /* ---- helpers (mirror MessageController::normalizePhone / render) ---- */
+      const normPhone = v => {
+        let d = String(v || '').replace(/\D/g, '');
+        if (d.length === 12 && d.startsWith('91')) d = d.slice(2);
+        else if (d.length === 11 && d.startsWith('0')) d = d.slice(1);
+        return /^[6-9]\d{9}$/.test(d) ? d : null;
+      };
+      const isEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+      const render = (body, name, generic) => {
+        name = String(name || '').trim();
+        const anon = generic || !name;
+        const first = anon ? 'Friend' : name.split(/\s+/)[0];
+        return body.replace(/\{friend\}/gi, first).replace(/\{name\}/gi, anon ? 'Friend' : name).replace(/\{link\}/gi, LINK);
+      };
 
-    // Select all/none
-    document.addEventListener('click', e => {
-      if (e.target.matches('[data-msall]')) {
-        const selectAll = e.target.dataset.msall === '1';
-        document.querySelectorAll('.ms-chk:not(:disabled)').forEach(chk => {
-          chk.checked = selectAll;
+      /* ---- recipient model ---- */
+      function parseExtras() {
+        const seen = new Set(BASE.map(r => WA ? r.phone : (r.email || '').toLowerCase()));
+        const out = [];
+        $('raw').value.split(/[\n,;]+/).map(s => s.trim()).filter(Boolean).forEach(raw => {
+          const val = WA ? normPhone(raw) : (isEmail(raw) ? raw.toLowerCase() : null);
+          if (val && seen.has(val)) return;          // duplicate of a customer / another extra
+          if (val) seen.add(val);
+          out.push({
+            key: 'x|' + (val || raw), id: null, name: '', raw, extra: true, bad: !val,
+            phone: WA ? val : null, mobile: WA ? val : '', email: WA ? '' : val
+          });
         });
-        // Submit first form
-        const firstForm = document.querySelector('.ms-chk:not(:disabled)')?.closest('form');
-        if (firstForm) firstForm.submit();
+        return out;
       }
-    });
+
+      const all = () => BASE.map(r => ({
+        key: r.id + '|' + (WA ? r.phone : r.email), id: r.id, name: r.name, extra: false,
+        bad: WA ? !r.phone : !isEmail(r.email || ''), phone: r.phone, mobile: r.mobile, email: r.email,
+      })).concat(extras);
+
+      const selected = () => all().filter(r => !r.bad && !unchecked.has(r.key));
+      const eligible = () => selected().filter(r => !sent.has(r.key));
+      const contact = r => WA ? r.phone : r.email;
+
+      /* ---- rendering ---- */
+      function draw() {
+        const rows = all();
+        $('rcpt-empty').style.display = rows.length ? 'none' : '';
+        $('rcpt-table').style.display = rows.length ? '' : 'none';
+        const tb = $('rcpt-body');
+        tb.textContent = '';
+        rows.forEach(r => {
+          const tr = document.createElement('tr');
+          const td0 = document.createElement('td');
+          const cb = document.createElement('input');
+          cb.type = 'checkbox'; cb.dataset.key = r.key; cb.checked = !r.bad && !unchecked.has(r.key); cb.disabled = r.bad;
+          td0.append(cb);
+          const td1 = document.createElement('td');
+          td1.append(r.name || '—');
+          if (r.extra) { const p = document.createElement('span'); p.className = 'pill pri'; p.textContent = 'New'; td1.append(' ', p); }
+          const td2 = document.createElement('td');
+          if (r.bad) { const s = document.createElement('span'); s.style.color = 'var(--bad)'; s.textContent = r.extra ? r.raw + ' — ' + (WA ? 'invalid number' : 'invalid email') : (WA ? 'invalid number' : 'invalid email'); td2.append(s); }
+          else td2.textContent = contact(r);
+          const td3 = document.createElement('td');
+          if (sent.has(r.key)) { const p = document.createElement('span'); p.className = 'pill ok'; p.textContent = 'Sent'; td3.append(p); }
+          tr.append(td0, td1, td2, td3);
+          tb.append(tr);
+        });
+
+        const chips = $('chips');
+        chips.textContent = '';
+        extras.forEach(x => {
+          const c = document.createElement('span'); c.className = 'chip' + (x.bad ? ' bad' : '');
+          c.append(x.raw + ' ');
+          const b = document.createElement('button'); b.type = 'button'; b.textContent = '×'; b.dataset.removeChip = x.raw;
+          c.append(b); chips.append(c);
+        });
+
+        const total = selected().length, left = eligible().length, done = total - left;
+        $('summary').innerHTML = '';
+        if (total) {
+          const b = document.createElement('b'); b.textContent = total;
+          $('summary').append(b, ' ' + (WA ? 'WhatsApp numbers' : 'email IDs') + ' ready');
+          if (done) { const s = document.createElement('span'); s.style.color = 'var(--ok)'; s.textContent = ' · ' + done + ' sent'; $('summary').append(s); }
+        } else $('summary').textContent = 'Choose recipients to continue';
+
+        const main = $('send-main');
+        main.disabled = busy || left === 0;
+        if (WA) main.textContent = total && left === 0 ? 'All ' + total + ' done' : (done ? 'Send next (' + left + ' left)' : 'Send on WhatsApp' + (total ? ' · ' + total : ''));
+        else {
+          main.textContent = total && left === 0 ? 'All ' + total + ' done' : (left > CHUNK ? 'Send to next ' + CHUNK + ' (' + left + ' left)' : 'Send Email' + (total ? ' · ' + total : ''));
+          $('send-mailto').disabled = busy || left === 0;
+        }
+        $('schedule').disabled = busy || left === 0;
+        $('copy').disabled = total === 0;
+      }
+
+      /* ---- events ---- */
+      $('rcpt-body').addEventListener('change', e => {
+        const k = e.target.dataset.key; if (!k) return;
+        e.target.checked ? unchecked.delete(k) : unchecked.add(k);
+        draw();
+      });
+      $('sel-all').onclick = () => { unchecked.clear(); draw(); };
+      $('sel-none').onclick = () => { all().forEach(r => unchecked.add(r.key)); draw(); };
+
+      $('raw').addEventListener('input', () => { extras = parseExtras(); draw(); });
+      $('chips').addEventListener('click', e => {
+        const v = e.target.dataset.removeChip; if (v === undefined) return;
+        $('raw').value = $('raw').value.split(/[\n,;]+/).map(s => s.trim()).filter(x => x && x !== v).join(', ');
+        extras = parseExtras(); draw();
+      });
+
+      $('tpl').addEventListener('change', e => {
+        const t = TPL.find(x => String(x.id) === e.target.value);
+        if (!t) return;                                  // "Write my own" keeps whatever is typed
+        $('body').value = t.body || '';
+        if (!WA && $('subject')) $('subject').value = t.subject || '';
+      });
+
+      $('copy').onclick = async () => {
+        const list = selected().map(contact).join(WA ? '\n' : ', ');
+        try { await navigator.clipboard.writeText(list); toast('Copied ' + selected().length); }
+        catch (_) { toast('Copy failed — your browser blocked clipboard access'); }
+      };
+
+      /* ---- validation shared by all send paths ---- */
+      function readForm() {
+        const body = $('body').value.trim();
+        const subject = WA ? '' : $('subject').value.trim();
+        if (!body) { toast('Write a message first'); return null; }
+        if (!WA && !subject) { toast('Add an email subject'); return null; }
+        const bad = body.match(/\{(?!friend\}|name\}|link\})[a-z_]+\}/gi);
+        if (bad && !confirm('These placeholders will be sent as-is: ' + [...new Set(bad)].join(' ') + '\n\nSend anyway?')) return null;
+        const tplId = +$('tpl').value;
+        const tpl = TPL.find(t => t.id === tplId);
+        return { body, subject: WA ? (tpl ? tpl.name : 'Custom message') : subject, template_id: tplId > 0 ? tplId : null };
+      }
+      const payloadRecipients = rs => rs.map(r => ({ user_id: r.id, mobile: r.phone || r.mobile || null, email: r.email || null, name: r.name || null }));
+
+      async function logSent(rs, f) {
+        busy = true; draw();
+        try {
+          await postJson(MSG.sendUrl, {
+            channel: WA ? 'wa' : 'em', subject: f.subject, body: f.body, template_id: f.template_id,
+            generic: !WA, recipients: payloadRecipients(rs)
+          });
+          rs.forEach(r => sent.add(r.key));
+        } catch (err) { toast('Opened, but could not be logged: ' + err.message); }
+        busy = false; draw();
+      }
+
+      /* ---- send paths ---- */
+      $('send-main').onclick = () => {
+        const f = readForm(); if (!f) return;
+        if (WA) {
+          const r = eligible()[0]; if (!r) return;
+          window.open('https://wa.me/91' + r.phone + '?text=' + encodeURIComponent(render(f.body, r.name, false)), '_blank', 'noopener');
+          logSent([r], f);
+        } else {
+          const chunk = eligible().slice(0, CHUNK); if (!chunk.length) return;
+          const url = 'https://mail.google.com/mail/?view=cm&fs=1&bcc=' + encodeURIComponent(chunk.map(r => r.email).join(','))
+            + '&su=' + encodeURIComponent(f.subject) + '&body=' + encodeURIComponent(render(f.body, '', true));
+          window.open(url, '_blank', 'noopener');
+          logSent(chunk, f);
+        }
+      };
+
+      if (!WA) $('send-mailto').onclick = () => {
+        const f = readForm(); if (!f) return;
+        const chunk = eligible().slice(0, CHUNK); if (!chunk.length) return;
+        location.href = 'mailto:?bcc=' + encodeURIComponent(chunk.map(r => r.email).join(','))
+          + '&subject=' + encodeURIComponent(f.subject) + '&body=' + encodeURIComponent(render(f.body, '', true));
+        logSent(chunk, f);
+      };
+
+      $('schedule').onclick = async () => {
+        const f = readForm(); if (!f) return;
+        const when = $('when').value;
+        if (!when) { toast('Pick a date and time first'); return; }
+        if (new Date(when) <= new Date()) { toast('Pick a time in the future'); return; }
+        const rs = eligible(); if (!rs.length) return;
+        busy = true; draw();
+        try {
+          const j = await postJson(MSG.scheduleUrl, {
+            channel: WA ? 'wa' : 'em', subject: f.subject, body: f.body, template_id: f.template_id,
+            scheduled_at: when, recipients: payloadRecipients(rs)
+          });
+          toast(j.count + ' message(s) scheduled — see the Activity tab');
+        } catch (err) { toast(err.message); }
+        busy = false; draw();
+      };
+
+      draw();
+    })();
   </script>
 @endpush
