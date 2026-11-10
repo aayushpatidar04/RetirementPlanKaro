@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\CouponController as AdminCouponController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\LeadController as AdminLeadController;
 use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
+use App\Http\Controllers\Admin\QuoteController as AdminQuoteController;
 use App\Http\Controllers\Admin\SessionController as AdminSessionController;
 use App\Http\Controllers\Admin\SettingController as AdminSettingController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
@@ -131,6 +132,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('coupons', [AdminCouponController::class, 'store'])->name('coupons.store');
         Route::post('coupons/{id}/toggle', [AdminCouponController::class, 'toggle'])->name('coupons.toggle');
         Route::post('coupons/{id}/delete', [AdminCouponController::class, 'destroy'])->name('coupons.delete');
+        Route::get('quotes', [AdminQuoteController::class, 'index'])->name('quotes');
+        Route::post('quotes', [AdminQuoteController::class, 'store'])->name('quotes.store');
+        Route::put('quotes/{id}', [AdminQuoteController::class, 'update'])->name('quotes.update');
+        Route::post('quotes/{id}/status', [AdminQuoteController::class, 'status'])->name('quotes.status');
         Route::get('settings', [AdminSettingController::class, 'index'])->name('settings');
         Route::post('settings', [AdminSettingController::class, 'update'])->name('settings.update');
     });

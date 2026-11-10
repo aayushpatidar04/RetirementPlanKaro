@@ -475,7 +475,7 @@
         class="nsub {{ request()->routeIs('admin.payments') ? 'on' : '' }}">Transactions</a>
     </details>
 
-    <details class="nav-group" {{
+<details class="nav-group" {{
   request()->routeIs([
     'admin.sessions',
     'admin.quotes',
@@ -484,9 +484,10 @@
   ])
   ? 'open'
   : ''
-    }}>
+}}>
       <summary class="ngh">Business Development <span class="chev">▾</span></summary>
-      <a href="#" class="nsub">Quote Requests</a>
+      <a href="{{ route('admin.quotes') }}"
+        class="nsub {{ request()->routeIs('admin.quotes') ? 'on' : '' }}">Quote Requests</a>
       <a href="{{ route('admin.sessions') }}"
         class="nsub {{ request()->routeIs('admin.sessions') ? 'on' : '' }}">Advisory
         sessions</a>
