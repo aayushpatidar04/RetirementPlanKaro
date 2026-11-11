@@ -91,7 +91,7 @@
                 <tr>
                   <td>{{ $log->created_at?->format('d M Y H:i:s') }}</td>
                   <td>{{ $log->user?->name ?? 'System' }}</td>
-                  <td><span class="pill">{{ $log->action }}</span></td>
+                  <td><span class="pill">{{ $log->event }}</span></td>
                   <td>{{ $log->subject_type ?? '—' }}</td>
                   <td>{{ $log->subject_id ?? '—' }}</td>
                   <td class="wrap">

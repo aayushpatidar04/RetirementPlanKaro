@@ -27,7 +27,7 @@ class AuditController extends Controller
 
         // Filter by action
         if ($request->filled('action')) {
-            $query->where('action', $request->query('action'));
+            $query->where('event', $request->query('action'));
         }
 
         // Filter by subject type
@@ -43,7 +43,7 @@ class AuditController extends Controller
         $audits = $query->paginate(50)->withQueryString();
 
         // Get distinct actions and subject types for filters
-        $actions = ActivityLog::distinct()->pluck('action')->filter()->sort()->values();
+        $actions = ActivityLog::distinct()->pluck('event')->filter()->sort()->values();
         $subjectTypes = ActivityLog::distinct()->pluck('subject_type')->filter()->sort()->values();
         $users = \App\Models\User::select('id', 'name')->get();
 
@@ -63,7 +63,7 @@ class AuditController extends Controller
             $query->whereDate('created_at', '<=', $request->query('to'));
         }
         if ($request->filled('action')) {
-            $query->where('action', $request->query('action'));
+            $query->where('event', $request->query('action'));
         }
         if ($request->filled('subject_type')) {
             $query->where('subject_type', $request->query('subject_type'));
@@ -78,7 +78,7 @@ class AuditController extends Controller
             return [
                 $log->created_at->format('d M Y H:i:s'),
                 $log->user?->name ?? 'System',
-                $log->action,
+                $log->event,
                 $log->subject_type ?? '—',
                 $log->subject_id ?? '—',
                 $this->formatProperties($log->properties),

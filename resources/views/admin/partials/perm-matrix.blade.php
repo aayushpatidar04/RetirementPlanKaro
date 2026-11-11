@@ -7,7 +7,7 @@
 
 @push('scripts')
     <script>
-        // Built from config('admin_permissions') — the keys are passed with @json, never typed into the view
+        
         const PERM_GROUPS = @json($permGroups);
         const PERM_SPECIAL = @json($permSpecial);
 
