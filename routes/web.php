@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminAuthController;
+use App\Http\Controllers\Admin\AuditController as AdminAuditController;
 use App\Http\Controllers\Admin\CouponController as AdminCouponController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\InvestmentPartnerController as AdminInvestmentPartnerController;
@@ -9,9 +10,13 @@ use App\Http\Controllers\Admin\MessageController as AdminMessageController;
 use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Admin\QuoteController as AdminQuoteController;
 use App\Http\Controllers\Admin\ReferralController as AdminReferralController;
+use App\Http\Controllers\Admin\RoleController as AdminRoleController;
 use App\Http\Controllers\Admin\SessionController as AdminSessionController;
 use App\Http\Controllers\Admin\SettingController as AdminSettingController;
+use App\Http\Controllers\Admin\TeamController as AdminTeamController;
+use App\Http\Controllers\Admin\TestimonialController as AdminTestimonialController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Admin\VersionController as AdminVersionController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BlobController;
 use App\Http\Controllers\ChatController;
@@ -136,6 +141,20 @@ Route::get('coupons', [AdminCouponController::class, 'index'])->name('coupons');
         Route::post('coupons/{id}/toggle', [AdminCouponController::class, 'toggle'])->name('coupons.toggle');
         Route::post('coupons/{id}/delete', [AdminCouponController::class, 'destroy'])->name('coupons.delete');
 
+        // Testimonials
+        Route::get('testimonials', [AdminTestimonialController::class, 'index'])->name('testimonials');
+        Route::post('testimonials', [AdminTestimonialController::class, 'store'])->name('testimonials.store');
+        Route::put('testimonials/{id}', [AdminTestimonialController::class, 'update'])->name('testimonials.update');
+        Route::delete('testimonials', [AdminTestimonialController::class, 'destroy'])->name('testimonials.delete');
+        Route::post('testimonials/duplicate', [AdminTestimonialController::class, 'duplicate'])->name('testimonials.duplicate');
+        Route::post('testimonials/move-up', [AdminTestimonialController::class, 'moveUp'])->name('testimonials.move-up');
+        Route::post('testimonials/move-down', [AdminTestimonialController::class, 'moveDown'])->name('testimonials.move-down');
+        Route::post('testimonials/toggle', [AdminTestimonialController::class, 'toggle'])->name('testimonials.toggle');
+        Route::post('testimonials/section', [AdminTestimonialController::class, 'updateSection'])->name('testimonials.section');
+        Route::post('testimonials/publish', [AdminTestimonialController::class, 'publish'])->name('testimonials.publish');
+        Route::get('testimonials/json', [AdminTestimonialController::class, 'viewJson'])->name('testimonials.json');
+        Route::get('testimonials/export', [AdminTestimonialController::class, 'export'])->name('testimonials.export');
+
         // Investment Partners
         Route::get('investment-partners', [AdminInvestmentPartnerController::class, 'index'])->name('investment-partners');
         Route::post('investment-partners', [AdminInvestmentPartnerController::class, 'store'])->name('investment-partners.store');
@@ -145,6 +164,29 @@ Route::get('coupons', [AdminCouponController::class, 'index'])->name('coupons');
         Route::post('investment-partners/move-up', [AdminInvestmentPartnerController::class, 'moveUp'])->name('investment-partners.move-up');
         Route::post('investment-partners/move-down', [AdminInvestmentPartnerController::class, 'moveDown'])->name('investment-partners.move-down');
         Route::get('investment-partners/export', [AdminInvestmentPartnerController::class, 'export'])->name('investment-partners.export');
+
+        // Access Control
+        Route::get('team', [AdminTeamController::class, 'index'])->name('team');
+        Route::post('team', [AdminTeamController::class, 'store'])->name('team.store');
+        Route::put('team/{id}', [AdminTeamController::class, 'update'])->name('team.update');
+        Route::delete('team', [AdminTeamController::class, 'destroy'])->name('team.delete');
+        Route::post('team/toggle', [AdminTeamController::class, 'toggle'])->name('team.toggle');
+        Route::post('team/role', [AdminTeamController::class, 'updateRole'])->name('team.role');
+        Route::post('team/permissions', [AdminTeamController::class, 'assignPermissions'])->name('team.permissions');
+
+        Route::get('roles', [AdminRoleController::class, 'index'])->name('roles');
+        Route::post('roles', [AdminRoleController::class, 'store'])->name('roles.store');
+        Route::put('roles/{id}', [AdminRoleController::class, 'update'])->name('roles.update');
+        Route::delete('roles', [AdminRoleController::class, 'destroy'])->name('roles.delete');
+        Route::post('roles/duplicate', [AdminRoleController::class, 'duplicate'])->name('roles.duplicate');
+
+        // Administration
+        Route::get('versions', [AdminVersionController::class, 'index'])->name('versions');
+        Route::post('versions/restore', [AdminVersionController::class, 'restore'])->name('versions.restore');
+        Route::get('versions/export', [AdminVersionController::class, 'export'])->name('versions.export');
+
+        Route::get('audit', [AdminAuditController::class, 'index'])->name('audit');
+        Route::get('audit/export', [AdminAuditController::class, 'export'])->name('audit.export');
 
         Route::get('quotes', [AdminQuoteController::class, 'index'])->name('quotes');
         Route::post('quotes', [AdminQuoteController::class, 'store'])->name('quotes.store');

@@ -517,7 +517,7 @@
   ? 'open'
   : ''}}>
       <summary class="ngh">Website Content <span class="chev">▾</span></summary>
-      <a href="#" class="nsub">Testimonials</a>
+      <a href="{{ route('admin.testimonials') }}" class="nsub {{ request()->routeIs('admin.testimonials') ? 'on' : '' }}">Testimonials</a>
     </details>
 
     <details class="nav-group" {{ 
@@ -528,8 +528,8 @@
   ? 'open'
   : ''}}>
       <summary class="ngh">Administration <span class="chev">▾</span></summary>
-      <a href="#" class="nsub">Website versions</a>
-      <a href="#" class="nsub">Audit log</a>
+      <a href="{{ route('admin.versions') }}" class="nsub {{ request()->routeIs('admin.versions') ? 'on' : '' }}">Published Versions</a>
+      <a href="{{ route('admin.audit') }}" class="nsub {{ request()->routeIs('admin.audit') ? 'on' : '' }}">Audit Trail</a>
     </details>
 
     <details class="nav-group" {{ 
@@ -540,8 +540,8 @@
   ? 'open'
   : ''}}>
       <summary class="ngh">Access Control <span class="chev">▾</span></summary>
-      <a href="#" class="nsub">Team Members</a>
-      <a href="#" class="nsub">Roles & Permissions</a>
+      <a href="{{ route('admin.team') }}" class="nsub {{ request()->routeIs('admin.team') ? 'on' : '' }}">Team Members</a>
+      <a href="{{ route('admin.roles') }}" class="nsub {{ request()->routeIs('admin.roles') ? 'on' : '' }}">Roles & Permissions</a>
     </details>
 
     <a href="{{ route('admin.settings') }}" class="top {{ request()->routeIs('admin.settings') ? 'on' : '' }}"

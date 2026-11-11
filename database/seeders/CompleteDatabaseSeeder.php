@@ -12,8 +12,11 @@ use App\Models\MessageTemplate;
 use App\Models\Payment;
 use App\Models\QuoteRequest;
 use App\Models\Referral;
+use App\Models\Role;
 use App\Models\ScheduledMessage;
 use App\Models\Setting;
+use App\Models\TeamMember;
+use App\Models\Testimonial;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -743,6 +746,13 @@ class CompleteDatabaseSeeder extends Seeder
         // Seed investment partners
         $this->call(InvestmentPartnerSeeder::class);
 
+        // Seed testimonials
+        $this->call(TestimonialSeeder::class);
+
+        // Seed roles and team members
+        $this->call(RoleSeeder::class);
+        $this->call(TeamMemberSeeder::class);
+
         DB::table('settings')->updateOrInsert(
             ['key' => 'message_stage_mapping'],
             ['value' => json_encode([
@@ -774,5 +784,8 @@ class CompleteDatabaseSeeder extends Seeder
         $this->command->info('Liabilities: ' . DB::table('liabilities')->count());
         $this->command->info('Life Goals: ' . DB::table('life_goals')->count());
         $this->command->info('Investment Partners: ' . InvestmentPartner::count());
+        $this->command->info('Testimonials: ' . Testimonial::count());
+        $this->command->info('Roles: ' . Role::count());
+        $this->command->info('Team Members: ' . TeamMember::count());
     }
 }
