@@ -41,7 +41,8 @@ class InvestmentPartnerController extends Controller
 
         Activity::log(null, 'investment_partner.created', "Investment partner created: {$partner->label}", $partner->toArray(), 'InvestmentPartner', $partner->id);
 
-        return back()->with('ok', 'Investment partner added.');
+        \App\Support\VersionHistory::record('Investment Partners', 'Investment partner added');
+        return back()->with('ok', 'Investment partner added');
     }
 
     public function update(Request $request, $id): RedirectResponse
@@ -66,7 +67,8 @@ class InvestmentPartnerController extends Controller
 
         Activity::log(null, 'investment_partner.updated', "Investment partner updated: {$partner->label}", $partner->toArray(), 'InvestmentPartner', $partner->id);
 
-        return back()->with('ok', 'Investment partner updated.');
+        \App\Support\VersionHistory::record('Investment Partners', 'Investment partner updated');
+        return back()->with('ok', 'Investment partner updated');
     }
 
     public function destroy(Request $request): RedirectResponse
@@ -84,7 +86,8 @@ class InvestmentPartnerController extends Controller
 
         Activity::log(null, 'investment_partner.deleted', "Investment partner deleted: {$name}", ['id' => $data['id']], 'InvestmentPartner', $data['id']);
 
-        return back()->with('ok', 'Investment partner deleted.');
+        \App\Support\VersionHistory::record('Investment Partners', 'Investment partner deleted');
+        return back()->with('ok', 'Investment partner deleted');
     }
 
     public function duplicate(Request $request): RedirectResponse
@@ -102,7 +105,8 @@ class InvestmentPartnerController extends Controller
 
         Activity::log(null, 'investment_partner.duplicated', "Investment partner duplicated: {$new->label}", $new->toArray(), 'InvestmentPartner', $new->id);
 
-        return back()->with('ok', 'Investment partner duplicated.');
+        \App\Support\VersionHistory::record('Investment Partners', 'Investment partner duplicated');
+        return back()->with('ok', 'Investment partner duplicated');
     }
 
     public function moveUp(Request $request): RedirectResponse
@@ -121,7 +125,8 @@ class InvestmentPartnerController extends Controller
             }
         }
 
-        return back()->with('ok', 'Order updated.');
+        \App\Support\VersionHistory::record('Investment Partners', 'Order updated');
+        return back()->with('ok', 'Order updated');
     }
 
     public function moveDown(Request $request): RedirectResponse
@@ -142,7 +147,8 @@ class InvestmentPartnerController extends Controller
             }
         }
 
-        return back()->with('ok', 'Order updated.');
+        \App\Support\VersionHistory::record('Investment Partners', 'Order updated');
+        return back()->with('ok', 'Order updated');
     }
 
     private function reorderAfterDelete(int $deletedOrder): void

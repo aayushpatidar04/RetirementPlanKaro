@@ -21,7 +21,7 @@ class SettingController extends Controller
             'wallet_unlock_cost'  => Settings::get('wallet_unlock_cost', 200),
             'wallet_unlock_hours' => Settings::get('wallet_unlock_hours', 24),
             'welcome_bonus'       => Settings::get('welcome_bonus', 600),
-            'referral_bonus'      => Settings::get('referral_bonus', 100),
+            'referral_bonus'      => \App\Support\ReferralProgramme::bonus(),
             'streak_points'       => Settings::get('streak_points', 50),
             'streak_days'         => Settings::get('streak_days', 7),
         ];
@@ -55,6 +55,18 @@ class SettingController extends Controller
             [$d['pack2_pts'], $d['pack2_rs']],
             [$d['pack3_pts'], $d['pack3_rs']],
         ]));
+
+        // one referral bonus: keep the Referrals page in step
+        $rp = json_decode((string) Settings::get('referral_programme'), true);
+        if (is_array($rp)) {
+            $rp['bonus'] = (int) $d['referral_bonus'];
+            Settings::set('referral_programme', json_encode($rp, JSON_UNESCAPED_UNICODE));
+        }
+
+        \App\Support\Activity::log(null, 'settings.updated', 'Fees & rewards saved', $d, 'Settings', 'fees');
+        \App\Support\VersionHistory::record('Pricing', 'Report ₹' . $d['report_price'] . ' · Session ₹' . $d['session_price']);
+        \App\Support\VersionHistory::record('Points', 'Points and wallet rules saved');
+        \App\Support\VersionHistory::record('Referral', 'Referral bonus changed on Fees & Rewards');
 
         return back()->with('ok', 'Settings saved.');
     }

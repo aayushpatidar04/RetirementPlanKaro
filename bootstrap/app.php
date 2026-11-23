@@ -13,8 +13,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->validateCsrfTokens(except: [
             'payu/callback',
-            'payu/webhook', // new — server-to-server POST from PayU, no session/CSRF token
+            'payu/webhook', // server-to-server POST from PayU, no session/CSRF token
             'api/lead',
+        ]);
+        $middleware->web(append: [
+            \App\Http\Middleware\TrackVisit::class, // public-site visit counter for the admin dashboard
         ]);
         $middleware->alias([
             'admin.auth' => \App\Http\Middleware\AdminAuth::class,

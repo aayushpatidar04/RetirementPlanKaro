@@ -29,7 +29,7 @@ class ReferralController extends Controller
                 'referrals.*',
                 'referrer.name as referrer_name',
                 'referrer.mobile as referrer_mobile',
-                'referrer.code as referrer_code',
+                'referrer.referral_code as referrer_code',
                 'referred.name as referred_name',
                 'referred.mobile as referred_mobile',
                 'referred.email as referred_email',
@@ -53,10 +53,10 @@ class ReferralController extends Controller
         $totalReferrals = Referral::count();
         $totalClicks = User::sum('clicks');
         $bonus = (int) ($settings['bonus'] ?? 100);
-        $rewardPoints = $totalReferrals * $bonus;
+        $rewardPoints = (int) \Illuminate\Support\Facades\DB::table('points_ledger')->whereIn('type', ['referral_bonus', 'referral_friend_bonus'])->sum('points');
 
         // Click stats per referrer for export
-        $referrerStats = User::select('name', 'mobile', 'code', 'clicks')
+        $referrerStats = User::select('name', 'mobile', 'referral_code', 'clicks')
             ->where('clicks', '>', 0)
             ->get()
             ->mapWithKeys(fn ($u) => [$u->name => (int) $u->clicks])
@@ -78,23 +78,7 @@ class ReferralController extends Controller
 
     private function getReferralSettings(): array
     {
-        $defaults = [
-            'on' => true,
-            'base' => config('app.url', 'https://retirementplankaro.com/'),
-            'bonus' => 100,
-            'friend' => 0,
-            'verify' => true,
-            'max' => '',
-            'msg' => 'Plan your retirement with Retirement Plan Karo. Join with my link: {link}',
-        ];
-        $raw = Settings::get('referral_programme');
-        if ($raw) {
-            $j = json_decode($raw, true);
-            if (is_array($j)) {
-                return array_merge($defaults, $j);
-            }
-        }
-        return $defaults;
+        return \App\Support\ReferralProgramme::settings();
     }
 
     private function getCampaignLinks(): array
@@ -121,16 +105,18 @@ class ReferralController extends Controller
             'msg' => 'nullable|string|max:500',
         ]);
         $settings = [
-            'on' => $data['on'] === '1',
+            'on' => ($data['on'] ?? '0') === '1',
             'bonus' => (int) ($data['bonus'] ?? 100),
             'friend' => (int) ($data['friend'] ?? 0),
-            'verify' => $request->verify === '1' ? '1' : '0',
-            'max' => $data['max'] !== '' ? (int) $data['max'] : '',
+            'verify' => $request->input('verify') === '1',
+            'max' => isset($data['max']) && $data['max'] !== '' && (int) $data['max'] > 0 ? (int) $data['max'] : '',
             'base' => (string) ($data['base'] ?? config('app.url')),
             'msg' => (string) ($data['msg'] ?? ''),
         ];
 
         Settings::set('referral_programme', json_encode($settings, JSON_UNESCAPED_UNICODE));
+        Settings::set('referral_bonus', $settings['bonus']); // same value as Fees & Rewards
+        \App\Support\VersionHistory::record('Referral', 'Referral settings saved');
         Activity::log(null, 'referral.settings_saved', 'Referral programme settings saved', $settings, 'Settings', 'referral_programme');
 
         return back()->with('ok', 'Referral settings saved.');
@@ -138,16 +124,22 @@ class ReferralController extends Controller
 
     public function updateReferralCode(Request $request): RedirectResponse
     {
+        $request->merge(['referral_code' => strtoupper(trim((string) $request->input('referral_code')))]);
         $data = $request->validate([
             'id' => 'required|exists:users,id',
-            'referral_code' => 'required|string|max:20|unique:users,code,' . $request->input('id'),
-        ]);
+            // the website only accepts 4–12 letters/digits in ?ref=
+            'referral_code' => ['required', 'regex:/^[A-Z0-9]{4,12}$/', \Illuminate\Validation\Rule::unique('users', 'referral_code')->ignore($request->input('id'))],
+        ], ['referral_code.regex' => 'Use 4 to 12 letters or digits.', 'referral_code.unique' => 'Another client already has this code.']);
 
         $user = User::findOrFail($data['id']);
         $oldCode = $user->referral_code;
-        $newCode = strtoupper(trim($data['referral_code']));
+        $newCode = $data['referral_code'];
 
-        $user->update(['referral_code' => $newCode]);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($user, $oldCode, $newCode) {
+            $user->update(['referral_code' => $newCode]);
+            // keep "Referred by" on the people this client already brought in
+            User::where('referred_by_code', $oldCode)->update(['referred_by_code' => $newCode]);
+        });
 
         Activity::log(
             $user->id,
@@ -206,10 +198,11 @@ class ReferralController extends Controller
             'target' => $data['target'],
             'clicks' => 0,
             'signups' => 0,
-            'on' => $data['on'] === '1',
+            'on' => ($data['on'] ?? '0') === '1',
         ];
 
         Settings::set('referral_campaign_links', json_encode($links, JSON_UNESCAPED_UNICODE));
+        \App\Support\VersionHistory::record('Referral', 'Campaign link added');
         Activity::log(null, 'referral.campaign_link_added', "Campaign link added: {$data['name']}", $links, 'Settings', 'referral_campaign_links');
 
         return back()->with('ok', 'Campaign link added.');
@@ -246,10 +239,11 @@ class ReferralController extends Controller
             'target' => $data['target'],
             'clicks' => $links[$index]['clicks'] ?? 0,
             'signups' => $links[$index]['signups'] ?? 0,
-            'on' => $data['on'] === '1',
+            'on' => ($data['on'] ?? '0') === '1',
         ];
 
         Settings::set('referral_campaign_links', json_encode($links, JSON_UNESCAPED_UNICODE));
+        \App\Support\VersionHistory::record('Referral', 'Campaign link changed');
         Activity::log(null, 'referral.campaign_link_edited', "Campaign link edited: {$data['name']}", $links, 'Settings', 'referral_campaign_links');
 
         return back()->with('ok', 'Campaign link updated.');
@@ -273,6 +267,7 @@ class ReferralController extends Controller
         $links = array_values($links);
 
         Settings::set('referral_campaign_links', json_encode($links, JSON_UNESCAPED_UNICODE));
+        \App\Support\VersionHistory::record('Referral', 'Campaign link deleted');
         Activity::log(null, 'referral.campaign_link_deleted', "Campaign link deleted: {$name}", $links, 'Settings', 'referral_campaign_links');
 
         return back()->with('ok', 'Campaign link deleted.');

@@ -39,7 +39,7 @@
                   data-open="{{ $x->open_url }}" @endif>
                     @csrf
                     <input type="hidden" name="id" value="{{ $x->id }}">
-                    <button type="submit" class="btn s p" @disabled(!$x->open_url)
+                    <button type="submit" class="btn s p" @disabled(!($x->can_send ?? $x->open_url))
                       title="{{ $x->open_url ? '' : 'No valid contact' }}">Send now</button>
                   </form>
                   <form method="POST" action="{{ route('admin.messages.scheduled.cancel') }}" class="inline">

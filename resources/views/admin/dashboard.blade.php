@@ -94,84 +94,62 @@
     <button class="btn p" id="btnDoneDash">Done</button>
   </div>
 
+  @php
+    $n = fn ($v) => number_format($v);
+    // [data-id, label, value, link, % key (or null), raw key for the zero check, caption when no % is shown]
+    $cards = [
+      ['site-visits', 'Site visits', $n($stats['visits']), route('admin.users'), 'pc_visits', 'visits', 'in period'],
+      ['new-registrations', 'New registrations', $n($stats['signups']), route('admin.users'), 'pc_signups', 'signups', 'in period'],
+      ['verified-clients', 'Verified clients', $n($stats['verified_r']), route('admin.users'), null, null, 'in period'],
+      ['pending-verification', 'Pending verification', $n($stats['users'] - $stats['verified']), route('admin.users'), null, null, 'all time'],
+      ['active-clients', 'Active clients', $n($stats['active_clients']), route('admin.users'), null, null, 'all time'],
+      ['client-records', 'Client Records', $n($stats['users']), route('admin.users'), null, null, 'all time'],
+      ['prospects', 'Prospects', $n($stats['leads_r']), route('admin.leads'), 'pc_leads', 'leads_r', 'in period'],
+      ['revenue', 'Revenue collected', '₹' . $n($stats['revenue_r']), route('admin.payments'), 'pc_revenue', 'revenue_r', 'in period'],
+      ['paying-clients', 'Paying clients', $n($stats['paid_clients']), route('admin.payments'), 'pc_paid', 'paid_clients', 'in period'],
+      ['failed-transactions', 'Failed transactions', $n($stats['failed_r']), route('admin.payments'), 'pc_failed', 'failed_r', 'in period'],
+      ['collection-rate', 'Collection success rate', $stats['collection_rate'] . '%', route('admin.payments'), null, null, 'in period'],
+      ['advisory-booked', 'Advisory sessions booked', $n($stats['sessions_booked']), route('admin.sessions'), null, null, 'in period'],
+      ['sessions-pending', 'Sessions pending', $n($stats['sessions_due']), route('admin.sessions'), null, null, 'all time'],
+      ['referral-registrations', 'Referral registrations', $n($stats['referral_regs']), route('admin.referrals'), null, null, 'in period'],
+      ['messages-sent', 'Messages sent', $n($stats['messages_sent']), route('admin.messages', ['tab' => 'act']), null, null, 'in period'],
+      ['coupons-redeemed', 'Discount codes redeemed', $n($stats['coupons_redeemed']), route('admin.coupons'), null, null, 'in period'],
+    ];
+  @endphp
   <div class="dg" id="kpiGrid">
-    <a class="dc kpi-card" data-id="site-visits" href="{{ route('admin.users') }}">
-      <div class="ce"><button type="button" class="up">Up</button><button type="button" class="down">Down</button><button type="button" class="rm">Remove</button></div>
-      <span>Site visits</span><b>{{ rand(120,450) }}</b><div><i class="cm">demo</i></div>
-    </a>
-    <a class="dc kpi-card" data-id="new-registrations" href="{{ route('admin.users') }}">
-      <div class="ce"><button type="button" class="up">Up</button><button type="button" class="down">Down</button><button type="button" class="rm">Remove</button></div>
-      <span>New registrations</span><b>{{ number_format($stats['signups']) }}</b>
-      <div><?php $p=$stats['pc_signups']; ?>@if($p['val']>0 || $stats['signups']>0)<i class="{{ $p['cls'] }}">{{ $p['sign'] }} {{ $p['val'] }}%</i><i class="cm">vs previous</i>@else<i class="cm">all time</i>@endif</div>
-    </a>
-    <a class="dc kpi-card" data-id="verified-clients" href="{{ route('admin.users') }}">
-      <div class="ce"><button type="button" class="up">Up</button><button type="button" class="down">Down</button><button type="button" class="rm">Remove</button></div>
-      <span>Verified clients</span><b>{{ number_format($stats['verified_r']) }}</b><div><i class="cm">in period</i></div>
-    </a>
-    <a class="dc kpi-card" data-id="pending-verification" href="{{ route('admin.users') }}">
-      <div class="ce"><button type="button" class="up">Up</button><button type="button" class="down">Down</button><button type="button" class="rm">Remove</button></div>
-      <span>Pending verification</span><b>{{ number_format($stats['users'] - $stats['verified']) }}</b><div><i class="cm">all time</i></div>
-    </a>
-    <a class="dc kpi-card" data-id="active-clients" href="{{ route('admin.users') }}">
-      <div class="ce"><button type="button" class="up">Up</button><button type="button" class="down">Down</button><button type="button" class="rm">Remove</button></div>
-      <span>Active clients</span><b>{{ number_format($stats['users']) }}</b><div><i class="cm">all time</i></div>
-    </a>
-    <a class="dc kpi-card" data-id="client-records" href="{{ route('admin.users') }}">
-      <div class="ce"><button type="button" class="up">Up</button><button type="button" class="down">Down</button><button type="button" class="rm">Remove</button></div>
-      <span>Client Records</span><b>{{ number_format($stats['users']) }}</b><div><i class="cm">all time</i></div>
-    </a>
-    <a class="dc kpi-card" data-id="prospects" href="{{ route('admin.leads') }}">
-      <div class="ce"><button type="button" class="up">Up</button><button type="button" class="down">Down</button><button type="button" class="rm">Remove</button></div>
-      <span>Prospects</span><b>{{ number_format($stats['leads_r']) }}</b><div><?php $p=$stats['pc_leads']; ?>@if($p['val']>0 || $stats['leads_r']>0)<i class="{{ $p['cls'] }}">{{ $p['sign'] }} {{ $p['val'] }}%</i><i class="cm">vs previous</i>@else<i class="cm">in period</i>@endif</div>
-    </a>
-    <a class="dc kpi-card" data-id="revenue" href="{{ route('admin.payments') }}">
-      <div class="ce"><button type="button" class="up">Up</button><button type="button" class="down">Down</button><button type="button" class="rm">Remove</button></div>
-      <span>Revenue collected</span><b>₹{{ number_format($stats['revenue_r']) }}</b><div><?php $p=$stats['pc_revenue']; ?>@if($p['val']>0 || $stats['revenue_r']>0)<i class="{{ $p['cls'] }}">{{ $p['sign'] }} {{ $p['val'] }}%</i><i class="cm">vs previous</i>@else<i class="cm">in period</i>@endif</div>
-    </a>
-    <a class="dc kpi-card" data-id="paying-clients" href="{{ route('admin.payments') }}">
-      <div class="ce"><button type="button" class="up">Up</button><button type="button" class="down">Down</button><button type="button" class="rm">Remove</button></div>
-      <span>Paying clients</span><b>{{ number_format($stats['paid_clients']) }}</b><div><?php $p=$stats['pc_paid']; ?>@if($p['val']>0 || $stats['paid_clients']>0)<i class="{{ $p['cls'] }}">{{ $p['sign'] }} {{ $p['val'] }}%</i><i class="cm">vs previous</i>@else<i class="cm">in period</i>@endif</div>
-    </a>
-    <a class="dc kpi-card" data-id="failed-transactions" href="{{ route('admin.payments') }}">
-      <div class="ce"><button type="button" class="up">Up</button><button type="button" class="down">Down</button><button type="button" class="rm">Remove</button></div>
-      <span>Failed transactions</span><b>{{ number_format($stats['failed_r']) }}</b><div><?php $p=$stats['pc_failed']; ?>@if($p['val']>0 || $stats['failed_r']>0)<i class="{{ $p['cls'] }}">{{ $p['sign'] }} {{ $p['val'] }}%</i><i class="cm">vs previous</i>@else<i class="cm">in period</i>@endif</div>
-    </a>
-    <a class="dc kpi-card" data-id="collection-rate" href="{{ route('admin.payments') }}">
-      <div class="ce"><button type="button" class="up">Up</button><button type="button" class="down">Down</button><button type="button" class="rm">Remove</button></div>
-      <span>Collection success rate</span><b>{{ ($stats['payments_ok']+$stats['failed_r'])>0 ? round(($stats['payments_ok']/($stats['payments_ok']+$stats['failed_r']))*100) : 0 }}%</b><div><i class="cm">in period</i></div>
-    </a>
-    <a class="dc kpi-card" data-id="advisory-booked" href="{{ route('admin.sessions') }}">
-      <div class="ce"><button type="button" class="up">Up</button><button type="button" class="down">Down</button><button type="button" class="rm">Remove</button></div>
-      <span>Advisory sessions booked</span><b>{{ number_format($stats['sessions_booked']) }}</b><div><i class="cm">in period</i></div>
-    </a>
-    <a class="dc kpi-card" data-id="sessions-pending" href="{{ route('admin.sessions') }}">
-      <div class="ce"><button type="button" class="up">Up</button><button type="button" class="down">Down</button><button type="button" class="rm">Remove</button></div>
-      <span>Sessions pending</span><b>{{ number_format($stats['sessions_due']) }}</b><div><i class="cm">all time</i></div>
-    </a>
-    <a class="dc kpi-card" data-id="referral-registrations" href="{{ route('admin.leads') }}">
-      <div class="ce"><button type="button" class="up">Up</button><button type="button" class="down">Down</button><button type="button" class="rm">Remove</button></div>
-      <span>Referral registrations</span><b>{{ number_format($stats['leads_r']) }}</b><div><i class="cm">in period</i></div>
-    </a>
-    <a class="dc kpi-card" data-id="messages-sent" href="{{ route('admin.dashboard') }}">
-      <div class="ce"><button type="button" class="up">Up</button><button type="button" class="down">Down</button><button type="button" class="rm">Remove</button></div>
-      <span>Messages sent</span><b>0</b><div><i class="cm">in period</i></div>
-    </a>
-    <a class="dc kpi-card" data-id="coupons-redeemed" href="{{ route('admin.coupons') }}">
-      <div class="ce"><button type="button" class="up">Up</button><button type="button" class="down">Down</button><button type="button" class="rm">Remove</button></div>
-      <span>Discount codes redeemed</span><b>0</b><div><i class="cm">all time</i></div>
-    </a>
+    @foreach($cards as [$id, $label, $val, $href, $pck, $raw, $scope])
+      <a class="dc kpi-card" data-id="{{ $id }}" href="{{ $href }}">
+        <div class="ce"><button type="button" class="up">Up</button><button type="button" class="down">Down</button><button type="button" class="rm">Remove</button></div>
+        <span>{{ $label }}</span><b>{{ $val }}</b>
+        <div>
+          @php $p = $pck ? $stats[$pck] : null; @endphp
+          @if($p && ($p['val'] > 0 || $stats[$raw] > 0))
+            <i class="{{ $p['cls'] }}">{{ $p['sign'] }} {{ $p['val'] }}%</i><i class="cm">vs previous</i>
+          @else
+            <i class="cm">{{ $scope }}</i>
+          @endif
+        </div>
+      </a>
+    @endforeach
     <div class="add" id="addCardBtn">+ Add card</div>
   </div>
 
   <div class="charts-grid">
-    <div class="chart-card"><h3>Traffic and registrations <span class="cm">last {{ $stats['periodLabel'] }}</span></h3><div class="chart-body"><canvas id="trendChart"></canvas><div style="font-size:12px;color:var(--mut);margin-top:8px"><span style="color:var(--pri)">●</span> Site visits (demo) &nbsp; <span style="color:var(--warn)">●</span> Registrations ×10</div></div></div>
+    <div class="chart-card"><h3>Traffic and registrations <span class="cm">{{ $stats['periodLabel'] }}@if($charts['padded']) · showing last 7 days @endif</span></h3><div class="chart-body"><canvas id="trendChart"></canvas></div></div>
     <div class="chart-card"><h3>Revenue collected <span class="cm">by day</span></h3><div class="chart-body"><canvas id="revChart"></canvas></div></div>
     <div class="chart-card"><h3>Acquisition funnel <span class="cm">in period</span></h3><div class="chart-body">
-      <?php $f1=max(1,$stats['signups']);$f2v=max(0,$stats['leads_r']);$f3v=max(0,$stats['paid_clients']);$f1m=max($f1,$f2v,$f3v);?>
-      <div style="display:grid;grid-template-columns:140px 1fr 60px;gap:10px;align-items:center;margin-bottom:8px"><span>Site visits</span><div style="height:12px;border-radius:6px;background:var(--pri);width:100%"></div><b style="text-align:right">{{ $f1 }}</b></div>
-      <div style="display:grid;grid-template-columns:140px 1fr 60px;gap:10px;align-items:center;margin-bottom:8px"><span>Registrations</span><div style="height:12px;border-radius:6px;background:var(--pri);width:100%"></div><b style="text-align:right">{{ $f1 }}</b></div>
-      <div style="display:grid;grid-template-columns:140px 1fr 60px;gap:10px;align-items:center;margin-bottom:8px"><span>Prospects</span><div style="height:12px;border-radius:6px;background:var(--warn);width:{{ $f1m>0?round(($f2v/$f1m)*100):0 }}%"></div><b style="text-align:right">{{ $f2v }}</b></div>
-      <div style="display:grid;grid-template-columns:140px 1fr 60px;gap:10px;align-items:center"><span>Paying clients</span><div style="height:12px;border-radius:6px;background:var(--ok);width:{{ $f1m>0?round(($f3v/$f1m)*100):0 }}%"></div><b style="text-align:right">{{ $f3v }}</b></div>
+      @php
+        $funnel = [
+          ['Site visits', $stats['visits'], 'var(--pri)'],
+          ['Registrations', $stats['signups'], 'var(--pri)'],
+          ['Prospects', $stats['leads_r'], 'var(--warn)'],
+          ['Paying clients', $stats['paid_clients'], 'var(--ok)'],
+        ];
+        $fmax = max(1, ...array_column($funnel, 1));
+      @endphp
+      @foreach($funnel as [$fl, $fv, $fc])
+        <div style="display:grid;grid-template-columns:140px 1fr 60px;gap:10px;align-items:center;margin-bottom:{{ $loop->last ? 0 : 8 }}px"><span>{{ $fl }}</span><div style="height:12px;border-radius:6px;background:{{ $fc }};width:{{ round($fv / $fmax * 100) }}%"></div><b style="text-align:right">{{ number_format($fv) }}</b></div>
+      @endforeach
     </div></div>
     <div class="chart-card"><h3>Payments by status <span class="cm">in period</span></h3><div class="chart-body" style="height:280px;max-width:320px;margin:0 auto"><canvas id="payChart"></canvas></div></div>
   </div>
@@ -181,17 +159,26 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
-const labels = Array.from({length:14},(_,i)=>{const d=new Date();d.setDate(d.getDate()-(13-i));return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});});
-const visits = labels.map(()=>Math.floor(40+Math.random()*60));
-const regs = labels.map(()=>Math.floor(({{ $stats['signups'] }}+Math.random()*5)/14));
+const CH = @json($charts);
+const inr = v => '₹' + Number(v).toLocaleString('en-IN');
 const chartOptions={responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}},x:{ticks:{maxTicksLimit:7}}}};
-new Chart(document.getElementById('trendChart'),{type:'line',data:{labels,datasets:[{label:'Site visits (demo)',data:visits,borderColor:'#4f46e5',backgroundColor:'#4f46e5',tension:0.4,pointRadius:2},{label:'Registrations ×10',data:regs.map(x=>x*10),borderColor:'#8a5a00',backgroundColor:'#8a5a00',tension:0.4,pointRadius:2}]},options:chartOptions});
-new Chart(document.getElementById('revChart'),{type:'bar',data:{labels,datasets:[{label:'Revenue',data:labels.map(()=>Math.floor(Math.random()*({{ $stats['revenue_r']>0?$stats['revenue_r']:5000 }})/10)),backgroundColor:'#0f7a3d'}]},options:chartOptions});
-new Chart(document.getElementById('payChart'),{type:'doughnut',data:{labels:['Success','Failed','Pending'],datasets:[{data:[{{ $stats['payments_ok']>0?$stats['payments_ok']:3 }},{{ $stats['failed_r']>0?$stats['failed_r']:1 }},0],backgroundColor:['#0f7a3d','#a4161a','#8a5a00']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
+new Chart(document.getElementById('trendChart'),{type:'line',data:{labels:CH.labels,datasets:[
+  {label:'Site visits',data:CH.visits,borderColor:'#4f46e5',backgroundColor:'#4f46e5',tension:0.4,pointRadius:2,yAxisID:'y'},
+  {label:'Registrations',data:CH.regs,borderColor:'#8a5a00',backgroundColor:'#8a5a00',tension:0.4,pointRadius:2,yAxisID:'y1'}
+]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:true,position:'bottom'}},scales:{y:{beginAtZero:true,ticks:{precision:0}},y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false},ticks:{precision:0}},x:{ticks:{maxTicksLimit:7}}}}});
+new Chart(document.getElementById('revChart'),{type:'bar',data:{labels:CH.labels,datasets:[{label:'Revenue',data:CH.revenue,backgroundColor:'#0f7a3d'}]},options:{...chartOptions,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>inr(c.parsed.y)}}},scales:{y:{beginAtZero:true,ticks:{callback:v=>inr(v)}},x:{ticks:{maxTicksLimit:7}}}}});
+new Chart(document.getElementById('payChart'),{type:'doughnut',data:{labels:['Success','Failed','Pending','Refunded'],datasets:[{data:CH.pay,backgroundColor:['#0f7a3d','#a4161a','#8a5a00','#697089']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
 
 function exportDashboard(){
-  const data=[['Dashboard Export - {{ $stats["periodLabel"] }}'],[''],['Metric','Value'],['Site visits','{{ rand(120,450) }} (demo)'],['New registrations','{{ $stats["signups"] }}'],['Verified clients (in period)','{{ $stats["verified_r"] }}'],['Pending verification','{{ $stats["users"]-$stats["verified"] }}'],['Client Records','{{ $stats["users"] }}'],['Prospects (in period)','{{ $stats["leads_r"] }}'],['Revenue collected (in period)','₹{{ $stats["revenue_r"] }}'],['Paying clients (in period)','{{ $stats["paid_clients"] }}'],['Failed transactions (in period)','{{ $stats["failed_r"] }}'],['Advisory sessions booked (in period)','{{ $stats["sessions_booked"] }}'],['Sessions pending (all time)','{{ $stats["sessions_due"] }}']];
-  const ws=XLSX.utils.aoa_to_sheet(data); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Dashboard'); XLSX.writeFile(wb,'Dashboard-{{ str_replace(' ','-',$stats["periodLabel"]) }}.xlsx');
+  const S=@json($stats);
+  const data=[['Dashboard Export - '+S.periodLabel],[''],['Metric','Value'],
+    ['Site visits (in period)',S.visits],['New registrations (in period)',S.signups],['Verified clients (in period)',S.verified_r],
+    ['Pending verification (all time)',S.users-S.verified],['Active clients (all time)',S.active_clients],['Client Records (all time)',S.users],
+    ['Prospects (in period)',S.leads_r],['Revenue collected (in period)','₹'+S.revenue_r],['Paying clients (in period)',S.paid_clients],
+    ['Failed transactions (in period)',S.failed_r],['Collection success rate (in period)',S.collection_rate+'%'],
+    ['Advisory sessions booked (in period)',S.sessions_booked],['Sessions pending (all time)',S.sessions_due],
+    ['Referral registrations (in period)',S.referral_regs],['Messages sent (in period)',S.messages_sent],['Discount codes redeemed (in period)',S.coupons_redeemed]];
+  const ws=XLSX.utils.aoa_to_sheet(data); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Dashboard'); XLSX.writeFile(wb,'Dashboard-'+S.periodLabel.replace(/\s+/g,'-')+'.xlsx');
 }
 
 const grid=document.getElementById('kpiGrid');
@@ -287,7 +274,15 @@ grid.addEventListener('click',function(e){
 addBtn.addEventListener('click',function(){
   if(!grid.classList.contains('edit')) return;
   const hidden=[...grid.querySelectorAll('.kpi-card.hidden-card')];
-  if(hidden.length){ hidden[0].classList.remove('hidden-card'); }
+  if(!hidden.length){ alert('All cards are already on the dashboard. Use Remove on a card first, then you can add it back here.'); return; }
+  const list=hidden.map((c,i)=>(i+1)+'. '+c.querySelector('span').textContent.trim()).join('\n');
+  const pick=prompt('Which card do you want to add?\n\n'+list+'\n\nType its number:','1');
+  if(pick===null) return;
+  const card=hidden[parseInt(pick,10)-1];
+  if(!card){ alert('Please type a number from the list.'); return; }
+  card.classList.remove('hidden-card');
+  grid.insertBefore(card, addBtn);   // shows up at the end, next to "+ Add card"
+  saveLayout();
 });
 
 loadLayout();

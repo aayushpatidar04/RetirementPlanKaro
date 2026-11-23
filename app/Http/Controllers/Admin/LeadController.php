@@ -19,6 +19,13 @@ class LeadController extends Controller
             ->paginate(40)
             ->withQueryString();
 
+        // name the website sent with the event, for the WhatsApp / Email popup
+        $leads->getCollection()->transform(function ($l) {
+            $p = json_decode((string) $l->payload, true) ?: [];
+            $l->name = trim(($p['name'] ?? '') . ' ' . ($p['surname'] ?? '')) ?: trim(($p['details']['nm'] ?? ''));
+            return $l;
+        });
+
         $events = DB::table('leads')->select('event')->distinct()->orderBy('event')->pluck('event');
 
         return view('admin.leads', compact('leads', 'event', 'events'));

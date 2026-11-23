@@ -451,101 +451,116 @@
       </div>
     </div>
     <hr style="height: 2px; width: 100%; border: 0; border-top: 2px solid #000; margin: 10px 0;">
-    <a href="{{ route('admin.dashboard') }}" class="top {{ request()->routeIs('admin.dashboard') ? 'on' : '' }}"
-      style="padding: 8px 10px;">Dashboard</a>
+    @if(\App\Support\AdminAccess::canRoute('admin.dashboard'))<a href="{{ route('admin.dashboard') }}" class="top {{ request()->routeIs('admin.dashboard') ? 'on' : '' }}"
+      style="padding: 8px 10px;">Dashboard</a>@endif
 
-    <details class="nav-group" {{ 
+    @if(\App\Support\AdminAccess::canSection('clients'))<details class="nav-group" {{ 
         request()->routeIs([
     'admin.clients',
     'admin.users',
     'admin.leads',
     'admin.payments',
   ])
-  ? 'open'
+  || request()->is('admin/section/clients') ? 'open'
   : ''}}>
       <summary class="ngh {{ request()->routeIs('admin.clients') ? 'on' : '' }}"><a href="{{ route('admin.clients') }}"
           style="color:inherit;text-decoration:none; font-weight: bold; padding: 0px;">Clients</a> <span
           class="chev">▾</span>
       </summary>
-      <a href="{{ route('admin.users') }}" class="nsub {{ request()->routeIs('admin.users') ? 'on' : '' }}">Client
-        Records</a>
-      <a href="{{ route('admin.leads') }}"
-        class="nsub {{ request()->routeIs('admin.leads') ? 'on' : '' }}">Prospects</a>
-      <a href="{{ route('admin.payments') }}"
-        class="nsub {{ request()->routeIs('admin.payments') ? 'on' : '' }}">Transactions</a>
-    </details>
+      @if(\App\Support\AdminAccess::canRoute('admin.users'))<a href="{{ route('admin.users') }}" class="nsub {{ request()->routeIs('admin.users') ? 'on' : '' }}">Client
+        Records</a>@endif
+      @if(\App\Support\AdminAccess::canRoute('admin.leads'))<a href="{{ route('admin.leads') }}"
+        class="nsub {{ request()->routeIs('admin.leads') ? 'on' : '' }}">Prospects</a>@endif
+      @if(\App\Support\AdminAccess::canRoute('admin.payments'))<a href="{{ route('admin.payments') }}"
+        class="nsub {{ request()->routeIs('admin.payments') ? 'on' : '' }}">Transactions</a>@endif
+    </details>@endif
 
-<details class="nav-group" {{
+@if(\App\Support\AdminAccess::canSection('business'))<details class="nav-group" {{
   request()->routeIs([
     'admin.sessions',
     'admin.quotes',
     'admin.referrals',
     'admin.messages',
   ])
-  ? 'open'
+  || request()->is('admin/section/business') ? 'open'
   : ''
 }}>
-      <summary class="ngh">Business Development <span class="chev">▾</span></summary>
-      <a href="{{ route('admin.quotes') }}"
-        class="nsub {{ request()->routeIs('admin.quotes') ? 'on' : '' }}">Quote Requests</a>
-      <a href="{{ route('admin.sessions') }}"
+      <summary class="ngh {{ request()->is('admin/section/business') ? 'on' : '' }}"><a href="{{ route('admin.section', 'business') }}"
+          style="color:inherit;text-decoration:none; font-weight: bold; padding: 0px;">Business Development</a> <span
+          class="chev">▾</span>
+      </summary>
+      @if(\App\Support\AdminAccess::canRoute('admin.quotes'))<a href="{{ route('admin.quotes') }}"
+        class="nsub {{ request()->routeIs('admin.quotes') ? 'on' : '' }}">Quote Requests</a>@endif
+      @if(\App\Support\AdminAccess::canRoute('admin.sessions'))<a href="{{ route('admin.sessions') }}"
         class="nsub {{ request()->routeIs('admin.sessions') ? 'on' : '' }}">Advisory
-        sessions</a>
-      <a href="{{ route('admin.referrals') }}"
-        class="nsub {{ request()->routeIs('admin.referrals') ? 'on' : '' }}">Referrals</a>
-      <a href="{{ route('admin.messages') }}"
-        class="nsub {{ request()->routeIs('admin.messages') ? 'on' : '' }}">Messages & Email</a>
-    </details>
+        sessions</a>@endif
+      @if(\App\Support\AdminAccess::canRoute('admin.referrals'))<a href="{{ route('admin.referrals') }}"
+        class="nsub {{ request()->routeIs('admin.referrals') ? 'on' : '' }}">Referrals</a>@endif
+      @if(\App\Support\AdminAccess::canRoute('admin.messages'))<a href="{{ route('admin.messages') }}"
+        class="nsub {{ request()->routeIs('admin.messages') ? 'on' : '' }}">Messages & Email</a>@endif
+    </details>@endif
 
-    <details class="nav-group" {{
+    @if(\App\Support\AdminAccess::canSection('pricing'))<details class="nav-group" {{
   request()->routeIs([
     'admin.coupons'
   ])
-  ? 'open'
+  || request()->is('admin/section/pricing') ? 'open'
   : ''
     }}>
-      <summary class="ngh">Pricing & Incentives <span class="chev">▾</span></summary>
-      <a href="{{ route('admin.coupons') }}" class="nsub {{ request()->routeIs('admin.coupons') ? 'on' : '' }}">Discount
-        codes</a>
-      <a href="{{ route('admin.investment-partners') }}" class="nsub {{ request()->routeIs('admin.investment-partners') ? 'on' : '' }}">Investment Partners</a>
-    </details>
+      <summary class="ngh {{ request()->is('admin/section/pricing') ? 'on' : '' }}"><a href="{{ route('admin.section', 'pricing') }}"
+          style="color:inherit;text-decoration:none; font-weight: bold; padding: 0px;">Pricing & Incentives</a> <span
+          class="chev">▾</span>
+      </summary>
+      @if(\App\Support\AdminAccess::canRoute('admin.coupons'))<a href="{{ route('admin.coupons') }}" class="nsub {{ request()->routeIs('admin.coupons') ? 'on' : '' }}">Discount
+        codes</a>@endif
+      @if(\App\Support\AdminAccess::canRoute('admin.investment-partners'))<a href="{{ route('admin.investment-partners') }}" class="nsub {{ request()->routeIs('admin.investment-partners') ? 'on' : '' }}">Investment Partners</a>@endif
+    </details>@endif
 
-    <details class="nav-group" {{ 
+    @if(\App\Support\AdminAccess::canSection('content'))<details class="nav-group" {{ 
         request()->routeIs([
     'admin.testimonials',
   ])
-  ? 'open'
+  || request()->is('admin/section/content') ? 'open'
   : ''}}>
-      <summary class="ngh">Website Content <span class="chev">▾</span></summary>
-      <a href="{{ route('admin.testimonials') }}" class="nsub {{ request()->routeIs('admin.testimonials') ? 'on' : '' }}">Testimonials</a>
-    </details>
+      <summary class="ngh {{ request()->is('admin/section/content') ? 'on' : '' }}"><a href="{{ route('admin.section', 'content') }}"
+          style="color:inherit;text-decoration:none; font-weight: bold; padding: 0px;">Website Content</a> <span
+          class="chev">▾</span>
+      </summary>
+      @if(\App\Support\AdminAccess::canRoute('admin.testimonials'))<a href="{{ route('admin.testimonials') }}" class="nsub {{ request()->routeIs('admin.testimonials') ? 'on' : '' }}">Testimonials</a>@endif
+    </details>@endif
 
-    <details class="nav-group" {{ 
+    @if(\App\Support\AdminAccess::canSection('administration'))<details class="nav-group" {{ 
         request()->routeIs([
     'admin.versions',
     'admin.audit',
   ])
-  ? 'open'
+  || request()->is('admin/section/administration') ? 'open'
   : ''}}>
-      <summary class="ngh">Administration <span class="chev">▾</span></summary>
-      <a href="{{ route('admin.versions') }}" class="nsub {{ request()->routeIs('admin.versions') ? 'on' : '' }}">Published Versions</a>
-      <a href="{{ route('admin.audit') }}" class="nsub {{ request()->routeIs('admin.audit') ? 'on' : '' }}">Audit Trail</a>
-    </details>
+      <summary class="ngh {{ request()->is('admin/section/administration') ? 'on' : '' }}"><a href="{{ route('admin.section', 'administration') }}"
+          style="color:inherit;text-decoration:none; font-weight: bold; padding: 0px;">Administration</a> <span
+          class="chev">▾</span>
+      </summary>
+      @if(\App\Support\AdminAccess::canRoute('admin.versions'))<a href="{{ route('admin.versions') }}" class="nsub {{ request()->routeIs('admin.versions') ? 'on' : '' }}">Published Versions</a>@endif
+      @if(\App\Support\AdminAccess::canRoute('admin.audit'))<a href="{{ route('admin.audit') }}" class="nsub {{ request()->routeIs('admin.audit') ? 'on' : '' }}">Audit Trail</a>@endif
+    </details>@endif
 
-    <details class="nav-group" {{ 
+    @if(\App\Support\AdminAccess::canSection('access'))<details class="nav-group" {{ 
         request()->routeIs([
     'admin.team',
     'admin.roles',
   ])
-  ? 'open'
+  || request()->is('admin/section/access') ? 'open'
   : ''}}>
-      <summary class="ngh">Access Control <span class="chev">▾</span></summary>
-      <a href="{{ route('admin.team') }}" class="nsub {{ request()->routeIs('admin.team') ? 'on' : '' }}">Team Members</a>
-      <a href="{{ route('admin.roles') }}" class="nsub {{ request()->routeIs('admin.roles') ? 'on' : '' }}">Roles & Permissions</a>
-    </details>
+      <summary class="ngh {{ request()->is('admin/section/access') ? 'on' : '' }}"><a href="{{ route('admin.section', 'access') }}"
+          style="color:inherit;text-decoration:none; font-weight: bold; padding: 0px;">Access Control</a> <span
+          class="chev">▾</span>
+      </summary>
+      @if(\App\Support\AdminAccess::canRoute('admin.team'))<a href="{{ route('admin.team') }}" class="nsub {{ request()->routeIs('admin.team') ? 'on' : '' }}">Team Members</a>@endif
+      @if(\App\Support\AdminAccess::canRoute('admin.roles'))<a href="{{ route('admin.roles') }}" class="nsub {{ request()->routeIs('admin.roles') ? 'on' : '' }}">Roles & Permissions</a>@endif
+    </details>@endif
 
-    <a href="{{ route('admin.settings') }}" class="top {{ request()->routeIs('admin.settings') ? 'on' : '' }}"
-      style="padding: 8px 10px;">Settings</a>
+    @if(\App\Support\AdminAccess::canRoute('admin.settings'))<a href="{{ route('admin.settings') }}" class="top {{ request()->routeIs('admin.settings') ? 'on' : '' }}"
+      style="padding: 8px 10px;">Settings</a>@endif
 
 
     <form method="POST" action="{{ route('admin.logout') }}" class="logout"
@@ -560,6 +575,8 @@
   <main>
     @if(session('ok'))
     <div class="flash">{{ session('ok') }}</div>@endif
+    @if(session('denied'))
+    <div class="flash">{{ session('denied') }}</div>@endif
     @yield('content')
   </main>
   <script>
@@ -573,6 +590,7 @@
       if (t) document.documentElement.dataset.theme = t;
     })();
   </script>
+  @include('admin.partials.access-js')
   @stack('scripts')
 </body>
 

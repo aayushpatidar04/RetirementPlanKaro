@@ -19,14 +19,16 @@ class QuoteController extends Controller
         $from = trim((string) $request->query('from', ''));
         $to = trim((string) $request->query('to', ''));
 
-        $quotes = QuoteRequest::query()
+        $base = QuoteRequest::query()
             ->when($productType !== '', fn ($q) => $q->where('product_type', $productType))
             ->when($status !== '', fn ($q) => $q->where('status', $status))
             ->when($from !== '', fn ($q) => $q->whereDate('created_at', '>=', $from))
             ->when($to !== '', fn ($q) => $q->whereDate('created_at', '<=', $to))
-            ->orderByDesc('created_at')
-            ->paginate(40)
-            ->withQueryString();
+            ->orderByDesc('created_at');
+        $quotes = (clone $base)->paginate(40)->withQueryString();
+        $quotes->getCollection()->each(fn ($q) => $q->setAttribute('details', self::pairs($q->details)));
+        // Export Excel: every request matching the filters, not only this page
+        $exportQuotes = (clone $base)->get()->each(fn ($q) => $q->setAttribute('details', self::pairs($q->details)))->values();
 
         $counts = [
             'New' => QuoteRequest::where('status', 'New')->count(),
@@ -42,8 +44,22 @@ class QuoteController extends Controller
             'status',
             'from',
             'to',
-            'counts'
+            'counts',
+            'exportQuotes'
         ));
+    }
+
+    /** Details as [[label, value], …] whatever shape they were saved in. */
+    public static function pairs($d): array
+    {
+        if (is_string($d)) {
+            $d = json_decode($d, true);
+        }
+        if (!is_array($d)) {
+            return [];
+        }
+
+        return collect($d)->map(fn ($v, $k) => is_array($v) ? array_values($v) : [ucfirst((string) $k), (string) $v])->values()->all();
     }
 
     private function transformDetails(string $productType, array $details): array

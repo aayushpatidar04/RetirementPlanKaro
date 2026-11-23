@@ -53,6 +53,7 @@ class PayController extends Controller
             'streak_days'    => (int) Settings::get('streak_days', 7),
             'streak_points'  => (int) Settings::get('streak_points', 50),
             'packs'          => Settings::packs(),
+            'booking'        => \App\Http\Controllers\Admin\SessionController::bookingRules(),
         ]);
     }
 
@@ -293,7 +294,7 @@ class PayController extends Controller
         if (!$c || !$c->active) {
             return ['ok' => false, 'message' => 'This coupon is not valid.'];
         }
-        if ($c->expires_at && Carbon::parse($c->expires_at)->isPast()) {
+        if ($c->expires_at && Carbon::parse($c->expires_at)->endOfDay()->isPast()) {
             return ['ok' => false, 'message' => 'This coupon has expired.'];
         }
         if ($c->max_uses !== null && $c->used_count >= $c->max_uses) {
@@ -315,19 +316,18 @@ class PayController extends Controller
 
     private function sessionData(array $s): array
     {
+        // rules from Admin → Advisory sessions → Availability & Rules
+        $rules = \App\Http\Controllers\Admin\SessionController::bookingRules();
         $date = (string) ($s['date'] ?? '');
-        $min  = now()->addDay()->toDateString();
-        $max  = now()->addDays(60)->toDateString();
-
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $date < $min || $date > $max) {
-            abort(422, 'Pick a date from tomorrow onwards.');
+        if ($why = \App\Http\Controllers\Admin\SessionController::dateProblem($date, $rules)) {
+            abort(422, $why);
         }
         $slot = (string) ($s['slot'] ?? '');
-        if (!in_array($slot, self::SLOTS, true)) {
+        if (!in_array($slot, $rules['slots'], true)) {
             abort(422, 'Pick a valid time.');
         }
         $mode = (string) ($s['mode'] ?? '');
-        if (!in_array($mode, self::MODES, true)) {
+        if (!in_array($mode, $rules['modes'], true)) {
             abort(422, 'Pick how we should talk.');
         }
         $mobile = substr(preg_replace('/\D/', '', (string) ($s['mobile'] ?? '')), -10);
@@ -344,7 +344,7 @@ class PayController extends Controller
         ];
     }
 
-    private function settle(int $id, string $payuId, string $mode): void
+    public function settle(int $id, string $payuId, string $mode): void
     {
         DB::transaction(function () use ($id, $payuId, $mode) {
             // lockForUpdate: callback(), webhook() and status() polling can all race to
@@ -408,7 +408,7 @@ class PayController extends Controller
         });
     }
 
-    private function fail(int $id): void
+    public function fail(int $id): void
     {
         DB::transaction(function () use ($id) {
             // Same race as settle() — lock first so a concurrent settle()/fail() on

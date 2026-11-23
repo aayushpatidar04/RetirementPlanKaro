@@ -679,12 +679,23 @@ footer{border-top:1px solid var(--hair);background:linear-gradient(180deg,transp
 <div class="panel noprint" style="margin-top:16px"><h3>Done with your plan? Submit to continue</h3><p style="color:var(--mu);margin:0 0 12px;font-size:14px">Your plan is ready. Next, see what to do at every age. Then add your family and download one complete report.</p><div class="row"><button class="btn small" type="button" data-sgoals>Try sample goals</button><button class="btn small" type="button" id="clrg2">Clear goals</button><button class="btn go small" type="button" data-submit="swp">Submit</button></div></div>
 <div class="nr"><button class="btn" type="button" data-go="plan">Back</button></div></section>
 </section>
+@if(!empty($tstFeed))
+{{-- Admin → Testimonials (shown as last published) --}}
+@if(!empty($tstFeed['on']) && count($tstFeed['testimonials'] ?? []))
+<section class="w tst" id="testimonials" aria-labelledby="tst-h">
+<span class="tst-k">{{ $tstFeed['text']['kicker'] ?? 'Kind words' }}</span><h2 id="tst-h">{{ $tstFeed['text']['title'] ?? 'What people say about Retirement Plan Karo' }}</h2>
+<p class="tst-s">{{ $tstFeed['text']['sub'] ?? '' }}</p>
+<div class="tst-g">@foreach($tstFeed['testimonials'] as $t)<figure class="tst-c"><blockquote>{{ $t['text'] }}</blockquote><figcaption><span class="tst-a" aria-hidden="true">{{ mb_strtoupper(mb_substr(trim($t['name']), 0, 1)) }}</span>{{ $t['name'] }}</figcaption></figure>@endforeach</div>
+<p class="tst-s" style="margin-top:14px;font-size:13px">{{ $tstFeed['text']['note'] ?? '' }}</p></section>
+@endif
+@else
 <section class="w tst" id="testimonials" aria-labelledby="tst-h">
 <span class="tst-k">Kind words</span><h2 id="tst-h">What people say about Retirement Plan Karo</h2>
 <p class="tst-s">Here is what people liked about planning their retirement here.</p>
 <div class="tst-g"><figure class="tst-c"><blockquote>I finished my plan in one sitting. The steps are short and the language is simple.</blockquote><figcaption><span class="tst-a" aria-hidden="true">V</span>Vaibhav</figcaption></figure><figure class="tst-c"><blockquote>Seeing my plan year by year made things much clearer for me.</blockquote><figcaption><span class="tst-a" aria-hidden="true">A</span>Aishwary</figcaption></figure><figure class="tst-c"><blockquote>I like that each step explains how the numbers are calculated.</blockquote><figcaption><span class="tst-a" aria-hidden="true">K</span>Kuber</figcaption></figure><figure class="tst-c"><blockquote>Easy to use on my phone. The buttons and text are big and clear.</blockquote><figcaption><span class="tst-a" aria-hidden="true">M</span>Mahaveer</figcaption></figure><figure class="tst-c"><blockquote>The checklist told me what to look at next, one step at a time.</blockquote><figcaption><span class="tst-a" aria-hidden="true">P</span>Padmavati</figcaption></figure><figure class="tst-c"><blockquote>The Family Dashboard puts everyone’s details in one place. It is very handy.</blockquote><figcaption><span class="tst-a" aria-hidden="true">L</span>Laxmi</figcaption></figure><figure class="tst-c"><blockquote>No heavy words. I could follow every step without any help.</blockquote><figcaption><span class="tst-a" aria-hidden="true">S</span>Sharda</figcaption></figure><figure class="tst-c"><blockquote>I liked that it shows the numbers and leaves the decision to me.</blockquote><figcaption><span class="tst-a" aria-hidden="true">R</span>Riddhi</figcaption></figure></div>
 <!-- Reminder: each person should confirm their quote before this goes live. -->
 <p class="tst-s" style="margin-top:14px;font-size:13px">Testimonials are individual opinions, shared with permission, and are not a promise or guarantee of any result. This tool is for education only.</p></section>
+@endif
 </div>
 
 <div id="v-checklist" class="w pg" hidden><div class="sh"><h2>What to do at every age</h2><p>Pick your decade and tick what you have done. Your age from Step 1 picks the list for you.</p></div>
@@ -1135,16 +1146,22 @@ const GK=()=>'rpk_gs_'+(USER?USER.mobile:''),GS_SLOTS=['Morning (9 am to 12 pm)'
 const closeGs=()=>{$('#gs').hidden=true};
 function leadX(u,ev,x){if(!u||!CFG.hook)return;try{fetch(CFG.hook,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(Object.assign({ev,ts:new Date().toISOString(),name:u.name,surname:u.surname,mobile:u.mobile,email:u.email,ref:u.refBy||'',code:u.code||'',city:u.city},x||{}))})}catch(e){}}
 function openGs(){if(!USER){PEND='gs';openAuth();return}if(!jrState().plan){toast('Complete your plan (Steps 1 to 3) first.');return}
-const iso=x=>new Date(x.getTime()-x.getTimezoneOffset()*6e4).toISOString().slice(0,10),n=Date.now(),mn=iso(new Date(n+864e5)),mx=iso(new Date(n+60*864e5));
+const iso=x=>new Date(x.getTime()-x.getTimezoneOffset()*6e4).toISOString().slice(0,10),n=Date.now(),BK=CFG.bk||null,SL=(BK&&BK.slots&&BK.slots.length)?BK.slots:GS_SLOTS,MD=(BK&&BK.modes&&BK.modes.length)?BK.modes:GS_MODES;
+if(BK&&!BK.on){$('#gsb').innerHTML=`<h3 id="gst">Book a Guidance Session</h3><p class="gsn">Online booking is closed right now. Please check again later.${BK.notice?'<br>'+esc(BK.notice):''}</p>`;$('#gs').hidden=false;return}
+let mn=BK?BK.min:iso(new Date(n+864e5));const mx=BK?BK.max:iso(new Date(n+60*864e5));
+for(let i=0;i<120&&gsBad(mn);i++){const t=new Date(mn+'T00:00');t.setDate(t.getDate()+1);const nx=iso(t);if(nx>mx)break;mn=nx}
 $('#gsb').innerHTML=`<h3 id="gst">Book a Guidance Session</h3><p class="gsp"><b>₹${CFG.gprice}</b> <small>one-time, per session</small></p><ul class="tips"><li>One-to-one session on your own personal report</li><li>Ask about retirement age, savings, monthly income and life goals</li><li>You choose the date, time and how we talk</li></ul>
-<div class="fd"><label for="gs-d">Preferred date *</label><div class="in"><input id="gs-d" type="date" min="${mn}" max="${mx}" value="${mn}"></div></div>
-<div class="fd"><label for="gs-s">Preferred time *</label><select class="sel" id="gs-s">${GS_SLOTS.map(x=>`<option>${x}</option>`).join('')}</select></div>
-<div class="fd"><label for="gs-m">How should we talk? *</label><select class="sel" id="gs-m">${GS_MODES.map(x=>`<option>${x}</option>`).join('')}</select></div>
+<div class="fd"><label for="gs-d">Preferred date *</label><div class="in"><input id="gs-d" type="date" min="${mn}" max="${mx}" value="${mn}"></div><small id="gs-dh" style="color:var(--bd)"></small></div>
+<div class="fd"><label for="gs-s">Preferred time *</label><select class="sel" id="gs-s">${SL.map(x=>`<option>${esc(x)}</option>`).join('')}</select></div>
+<div class="fd"><label for="gs-m">How should we talk? *</label><select class="sel" id="gs-m">${MD.map(x=>`<option>${esc(x)}</option>`).join('')}</select></div>
 <div class="fd"><label for="gs-p">Mobile number *</label><div class="in"><input id="gs-p" type="tel" inputmode="numeric" autocomplete="tel" maxlength="14" value="${esc(USER.mobile||'')}"></div></div>
 <div class="fd"><label for="gs-n">What would you like to discuss? (optional)</label><textarea class="sel" id="gs-n" rows="3" maxlength="300" placeholder="For example: Can I retire at 55?"></textarea></div>
 <label class="ck"><input type="checkbox" id="gs-c"><span>I understand this session helps me understand my report. It is educational and is not a guarantee of growth. *</span></label>
 <button class="btn pri" id="gs-go" type="button" style="margin-top:14px">Pay ₹${CFG.gprice} and book</button>
 ${CFG.rzp?'<p class="gsn">Payment is handled securely by PayU.</p>':'<p class="gsn" style="color:var(--bd)">Test mode: payment gateway is not connected yet.</p>'}`;$('#gs').hidden=false}
+/* booking rules from Admin → Advisory sessions → Availability & Rules (CFG.bk) */
+function gsBad(d){const B=CFG.bk;if(!B||!d)return '';if(d<B.min||d>B.max)return 'Pick a date between '+B.min+' and '+B.max+'.';const w=new Date(d+'T00:00').getDay()||7;if(!(B.days||[]).includes(w))return 'Sessions are not held on this day of the week. Please pick another day.';if((B.blocked||[]).includes(d))return 'This date is not available. Please pick another day.';if((B.full||[]).includes(d))return 'This date is fully booked. Please pick another day.';return ''}
+document.addEventListener('change',e=>{if(e.target.id!=='gs-d')return;const m=gsBad(e.target.value),h=document.getElementById('gs-dh'),b=document.getElementById('gs-go');if(h)h.textContent=m;if(b)b.disabled=!!m});
 function doGs(){}/* replaced by the real booking flow in the payu-api script below */
 document.addEventListener('click',e=>{const c=s=>e.target.closest(s);if(c('[data-gs]')&&!c('[data-gs]').disabled)openGs();else if(c('#gs-go'))doGs();else if(c('#gsx')||e.target.id==='gs')closeGs()});
 addEventListener('keydown',e=>{if(e.key==='Escape')closeGs()});
@@ -2275,7 +2292,7 @@ if(/^#explore/.test(location.hash))route();
 </style>
 <script id="ow-js">
 (function(){
-const R=[['fd','Want to Invest in FD Upto 9% Interest Rate','cWVzOXRpenYvTFdrci9lbS5rbmlsZW5vLnllbm9tZWxiYXRzLy86c3B0dGg='],['bonds','Want to Invest in Bonds Upto 14% Interest Rate','cHBhLXNvaT1tcm9mdGFscF9tdHUmbm90dHViX2VyYWhzPW11aWRlbV9tdHUmcHBhc3RhaHc9ZWNydW9zX210dSZGNzc0NDQ9ZWRvQ2xhcnJlZmVyP2V0aXZuaS9sYXJyZWZlci9zZG5vYi9tb2MuaHRsYWV3dG5pdy53d3cvLzpzcHR0aA=='],['intl','Want to Invest in International Market','OTV1M3M1YncvQ0htUi9lbS5rbmlsZW5vLnllbm9tZG5pLy86c3B0dGg='],['mfs','Want to Invest in Mutual Fund or Indian Stocks','MTIwMTE9ZGlwcmcmYnA9ZXB5dCYyMzYwMT1kY3ByZz9yZXRzaWdlUi90bnVvY2NBL3BwYS9tb2MubmFoa2VyYWhzLnlpZC8vOnNwdHRo']];
+const R=@json($owRows ?? []);
 const dec=s=>{try{return atob(s).split('').reverse().join('')}catch(e){return ''}};
 const TILE='<a class="xtile" href="#explore/invest"><h3>One Window Investing</h3><p>FD, Bonds, International and Mutual Funds in one place</p><span class="go">Open →</span></a>';
 function render(){const el=document.getElementById('v-explore');
@@ -2397,7 +2414,7 @@ const rows=[],det={};f.forEach(x=>{if(x.w&&v[x.w[0]]!==x.w[1])return;const val=A
 const lbl=x.l.replace(/ \(.*\)$/,'');rows.push([lbl,x.k==='pan'?'Provided':x.t==='num'&&x.i?m(num(val)):val])});
 const ref='GQ'+Date.now().toString(36).toUpperCase(),pn=P[S.p].n,ch=(v.ch&&v.ch.length?v.ch.join(' / '):'call or WhatsApp');
 const body=encodeURIComponent('Quote request '+ref+' for '+pn+'\n\n'+rows.map(r=>r[0]+': '+r[1]).join('\n')),mail='mailto:'+CFG.mail+'?subject='+encodeURIComponent('Quote request: '+pn+' ('+ref+')')+'&body='+body;
-try{if(CFG.hook)fetch(CFG.hook,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({type:'quote_request',ref,product:S.p,productName:pn,consent:{given:true,acknowledged:true,version:'2026-10',ts:new Date().toISOString()},ts:new Date().toISOString(),details:det})})}catch(x){}
+try{if(CFG.hook)fetch(CFG.hook,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({type:'quote_request',ref,product:S.p,productName:pn,rows,consent:{given:true,acknowledged:true,version:'2026-10',ts:new Date().toISOString()},ts:new Date().toISOString(),details:det})})}catch(x){}
 try{const k='rpk_quotes_'+v.mb,h=LS.g(k)||[];h.unshift({ref,n:pn,t:Date.now()});LS.s(k,h.slice(0,20))}catch(x){}
 S.done={ref,p:S.p,pn,ch,mail,rows,name:(v.nm||'').split(' ')[0]};draw();document.getElementById('v-explore').scrollIntoView({behavior:'smooth'});toast('Quote request submitted')}
 function render(){const el=document.getElementById('v-explore');prefill();
@@ -2948,6 +2965,7 @@ async function loadState(){
     if(d.ref_pts>0)CFG.refPts=d.ref_pts;
     if(d.streak_days>0)CFG.streakDays=d.streak_days;
     if(d.streak_points>0)CFG.dayPts=d.streak_points;
+    if(d.booking)CFG.bk=d.booking;
     LS.s(GK(),d.sessions||[]);
     if(window.RPK_PTS&&typeof d.report_points==='number')window.RPK_PTS.report=d.report_points;
   }
@@ -3208,6 +3226,17 @@ body:has(#rpk-verify-banner) #shb{bottom:calc(112px + env(safe-area-inset-bottom
 body:has(#rpk-verify-banner) .toast{bottom:calc(120px + env(safe-area-inset-bottom,0px))}
 }
 </style>
+<script id="tool-usage-js">
+/* Tools tab on the admin client page: note which free tool a signed-in client opened */
+(function(){
+const NAMES={returns:'My Investment Returns',portfolio:'Stock Portfolio Analysis',tax:'Income Tax Calculator',sip:'SIP Calculator',emi:'Home Loan EMI Calculator',budget:'Budget Planner',sample:'Sample Portfolio',invest:'One Window Investing',gq:'Get Quotes'};
+const prev=window.renderExplore;if(typeof prev!=='function')return;
+window.renderExplore=function(sub){
+const r=prev.apply(this,arguments);
+try{if(sub&&NAMES[sub]&&typeof USER!=='undefined'&&USER){const t=document.querySelector('meta[name=csrf-token]');fetch('/api/tool-usage',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':t?t.content:''},body:JSON.stringify({tool:NAMES[sub]})}).catch(()=>{})}}catch(e){}
+return r};
+})();
+</script>
 
 </body>
 </html>

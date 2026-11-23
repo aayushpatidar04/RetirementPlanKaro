@@ -135,7 +135,7 @@
                         </form>
 
                         <form method="POST" action="{{ route('admin.roles.delete') }}" class="inline">
-                          @csrf
+                          @csrf @method('DELETE')
                           <input type="hidden" name="id" value="{{ $r->id }}">
                           <button type="submit" class="btn s d"
                             data-confirm="{{ 'Delete this role?' . "\n\n" . $r->name }}">Delete</button>
