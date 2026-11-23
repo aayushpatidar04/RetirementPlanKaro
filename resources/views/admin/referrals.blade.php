@@ -837,8 +837,9 @@
           @foreach($campaignLinks as $index => $l)
             <tr>
               <td>{{ $l['name'] }}</td>
-              <td class="link-cell monospace" title="{{ $settings['base'] }}{{ $l['target'] }}?src={{ $l['code'] }}">
-                {{ $settings['base'] }}/{{ $l['target'] }}?src={{ $l['code'] }}
+              @php $cUrl = \App\Support\ReferralProgramme::campaignUrl($l, $settings['base']); @endphp
+              <td class="link-cell monospace" title="{{ $cUrl }}">
+                {{ $cUrl }}
               </td>
               <td>{{ $l['clicks'] ?? 0 }}</td>
               <td>{{ $l['signups'] ?? 0 }}</td>

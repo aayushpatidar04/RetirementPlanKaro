@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\RegisterRequest;
 use App\Models\User;
+use App\Support\ClientInfo;
+use App\Support\ReferralProgramme;
 use App\Support\Settings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,8 +23,11 @@ class AuthController extends Controller
         if (!empty($d['ref'])) {
             $referrer = User::where('referral_code', $d['ref'])->first();
         }
+        // referral programme switched off, or this client's referrals turned off / at the limit
+        $countsAsReferral = $referrer && ReferralProgramme::canRefer($referrer);
+        $source = ClientInfo::source($request, $referrer?->referral_code);
 
-        $user = DB::transaction(function () use ($d, $referrer) {
+        $user = DB::transaction(function () use ($d, $referrer, $countsAsReferral, $request, $source) {
             $user = User::create([
                 'name'             => $d['name'],
                 'surname'          => $d['surname'],
@@ -36,6 +41,13 @@ class AuthController extends Controller
                 'share_consent'    => (bool) ($d['share'] ?? false),
                 'consented_at'     => now(),
             ]);
+            $user->forceFill([
+                'signup_ip'     => $request->ip(),
+                'device'        => ClientInfo::device($request->userAgent()),
+                'source'        => $source,
+                'last_login_at' => now(),
+                'last_seen_at'  => now(),
+            ])->save();
 
             // Welcome bonus is not gated by email verification.
             DB::table('points_ledger')->insert([
@@ -45,7 +57,7 @@ class AuthController extends Controller
             ]);
 
             // Referral is recorded now, but the referrer is paid only once this user verifies their email.
-            if ($referrer && $referrer->id !== $user->id) {
+            if ($countsAsReferral && $referrer->id !== $user->id) {
                 DB::table('referrals')->insert([
                     'referrer_user_id' => $referrer->id, 'referred_user_id' => $user->id,
                     'credited' => false, 'created_at' => now(), 'updated_at' => now(),
@@ -54,6 +66,14 @@ class AuthController extends Controller
 
             return $user;
         });
+
+        // "pay only after email verification" switched off: pay the referral now
+        if ($countsAsReferral && !ReferralProgramme::settings()['verify']) {
+            ReferralProgramme::credit($user->id, 'signed up');
+        }
+        if (str_starts_with($source, 'Campaign: ')) {
+            ReferralProgramme::countCampaignSignup(substr($source, 10));
+        }
 
         Auth::login($user, true);
         $request->session()->regenerate();
@@ -100,6 +120,7 @@ class AuthController extends Controller
         }
 
         $request->session()->regenerate();
+        Auth::user()->forceFill(['last_login_at' => now(), 'last_seen_at' => now()])->save();
 
         return response()->json([
             'user' => $this->payload(Auth::user()),

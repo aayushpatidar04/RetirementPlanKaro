@@ -8,6 +8,8 @@ use App\Models\MessageTemplate;
 use App\Models\ScheduledMessage;
 use App\Models\User;
 use App\Support\Activity;
+use App\Support\ClientMail;
+use App\Support\LeadStage;
 use App\Support\Settings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -25,10 +27,8 @@ class MessageController extends Controller
 {
     public const SITE_LINK = 'https://retirementplankaro.com';
 
-    private const LEAD_STAGES = [
-        'Signed up', 'Payment pending', 'Payment failed',
-        'Paid report', 'Wallet active', 'Session booked',
-    ];
+    // stages are worked out from what each client did (App\Support\LeadStage)
+    private const LEAD_STAGES = LeadStage::STAGES;
 
     private const SEGMENTS = [
         'paid'   => ['Paid report', 'Wallet active'],
@@ -71,26 +71,24 @@ class MessageController extends Controller
         if ($segment === 'new_only') return [];
 
         $col = $channel === 'wa' ? 'mobile' : 'email';
-        $q = User::query()
-            ->select('id', 'name', 'mobile', 'email', 'stage')
-            ->whereNotNull($col)->where($col, '!=', '')
-            ->orderBy('name');
+        $rows = LeadStage::clients($segment === '__fixed' ? ($fixed ?: [0]) : null)
+            ->filter(fn ($u) => !empty($u->{$col}))
+            ->filter(function ($u) use ($segment) {
+                return match (true) {
+                    isset(self::SEGMENTS[$segment]) => in_array($u->lead_stage, self::SEGMENTS[$segment], true),
+                    str_starts_with($segment, 'stage_') => $u->lead_stage === substr($segment, 6),
+                    default => true,
+                };
+            })
+            ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE);
 
-        if ($segment === '__fixed') {
-            $q->whereIn('id', $fixed ?: [0]);
-        } elseif (str_starts_with($segment, 'stage_')) {
-            $q->where('stage', substr($segment, 6));
-        } elseif (isset(self::SEGMENTS[$segment])) {
-            $q->whereIn('stage', self::SEGMENTS[$segment]);
-        }
-
-        return $q->get()->map(fn($u) => [
+        return $rows->map(fn($u) => [
             'id'     => $u->id,
-            'name'   => $u->name,
+            'name'   => $u->full_name ?: $u->name,
             'mobile' => $u->mobile,
             'email'  => $u->email,
             'phone'  => self::normalizePhone($u->mobile),
-        ])->all();
+        ])->values()->all();
     }
 
     private function logFilter($q, Request $r)
@@ -156,7 +154,12 @@ class MessageController extends Controller
         // pending scheduled items (also needed for the tab badge)
         $pending = ScheduledMessage::where('status', 'scheduled')->where('done', false)
             ->orderBy('scheduled_at')->limit(200)->get();
-        $pending->each(fn($m) => $m->setAttribute('open_url', $this->openUrl($m)));
+        $pending->each(function ($m) {
+            $r = (array) $m->recipient;
+            // email is sent by the server; only WhatsApp needs a chat window opened
+            $m->setAttribute('open_url', $m->channel === 'wa' ? $this->openUrl($m) : null);
+            $m->setAttribute('can_send', $m->channel === 'wa' ? (bool) $m->open_url : (bool) filter_var($r['email'] ?? '', FILTER_VALIDATE_EMAIL));
+        });
         $dueCount = $pending->filter(fn($m) => Carbon::parse($m->scheduled_at)->lte(now()))->count();
 
         return view('admin.messages', [
@@ -170,7 +173,7 @@ class MessageController extends Controller
 
     /* ---------- templates ---------- */
 
-    public function storeTemplate(Request $request): RedirectResponse
+    public function storeTemplate(Request $request): RedirectResponse|JsonResponse
     {
         $data = $request->validate([
             'name' => 'required|string|max:100',
@@ -188,10 +191,14 @@ class MessageController extends Controller
 
         Activity::log(null, 'message.template_created', "Template created: {$template->name}", $template->toArray(), 'MessageTemplate', $template->id);
 
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true, 'template' => $template->only(['id', 'name', 'channel', 'subject', 'body'])]);
+        }
+
         return $this->backToTemplates($template->channel, $template->id)->with('ok', 'Template created.');
     }
 
-    public function updateTemplate(Request $request, $id): RedirectResponse
+    public function updateTemplate(Request $request, $id): RedirectResponse|JsonResponse
     {
         $template = MessageTemplate::findOrFail($id);
 
@@ -209,6 +216,10 @@ class MessageController extends Controller
         ]);
 
         Activity::log(null, 'message.template_updated', "Template updated: {$template->name}", $template->toArray(), 'MessageTemplate', $template->id);
+
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true, 'template' => $template->only(['id', 'name', 'channel', 'subject', 'body'])]);
+        }
 
         return $this->backToTemplates($template->channel, $template->id)->with('ok', 'Template updated.');
     }
@@ -274,13 +285,28 @@ class MessageController extends Controller
             'body' => 'required|string|max:5000',
             'template_id' => 'nullable|integer',
             'generic' => 'nullable|boolean',
+            'deliver' => 'nullable|boolean', // email: send it from the server (otherwise it was opened in Gmail / mail app)
         ]);
 
         $generic = (bool) ($data['generic'] ?? false);
+        $deliver = $data['channel'] === 'em' && (bool) ($data['deliver'] ?? false);
         $templateId = ($data['template_id'] ?? 0) > 0 ? $data['template_id'] : null;
+        $failed = 0;
 
-        DB::transaction(function () use ($data, $generic, $templateId) {
+        DB::transaction(function () use ($data, $generic, $templateId, $deliver, &$failed) {
             foreach ($data['recipients'] as $r) {
+                // popups on Transactions / Quote Requests know the contact, not the client id
+                if (empty($r['user_id'])) {
+                    $mob = self::normalizePhone($r['mobile'] ?? null);
+                    $r['user_id'] = (!empty($r['email']) ? DB::table('users')->where('email', strtolower($r['email']))->value('id') : null)
+                        ?? ($mob ? DB::table('users')->where('mobile', $mob)->value('id') : null);
+                }
+                $body = self::render($data['body'], $r['name'] ?? null, $generic);
+                $ok = true;
+                if ($deliver) {
+                    $ok = ClientMail::send($r['email'] ?? null, (string) ($data['subject'] ?? ''), $body);
+                    $failed += $ok ? 0 : 1;
+                }
                 CommunicationLog::create([
                     'user_id' => $r['user_id'] ?? null,
                     'channel' => $data['channel'],
@@ -290,8 +316,8 @@ class MessageController extends Controller
                         'name' => $r['name'] ?? null,
                     ],
                     'subject' => $data['subject'] ?? null,
-                    'body' => self::render($data['body'], $r['name'] ?? null, $generic),
-                    'status' => 'sent',
+                    'body' => $body,
+                    'status' => $ok ? 'sent' : 'failed',
                     'template_id' => $templateId,
                     'sent_at' => now(),
                 ]);
@@ -304,8 +330,8 @@ class MessageController extends Controller
         ], 'CommunicationLog', null);
 
         return $request->expectsJson()
-            ? response()->json(['ok' => true, 'count' => $count])
-            : back()->with('ok', 'Messages logged.');
+            ? response()->json(['ok' => true, 'count' => $count, 'failed' => $failed, 'delivered' => $deliver])
+            : back()->with('ok', $deliver ? ($count - $failed) . ' email(s) sent' . ($failed ? ", {$failed} failed." : '.') : 'Messages logged.');
     }
 
     /* ---------- scheduled ---------- */
@@ -358,6 +384,9 @@ class MessageController extends Controller
             }
 
             $r = (array) $msg->recipient;    // a single recipient (old code looped over its fields)
+            $body = self::render((string) $msg->body, $r['name'] ?? null);
+            // email goes out from the server; WhatsApp is opened by the admin from the Activity tab
+            $ok = $msg->channel !== 'em' || ClientMail::send($r['email'] ?? null, (string) $msg->subject, $body);
             CommunicationLog::create([
                 'user_id' => $r['user_id'] ?? null,
                 'channel' => $msg->channel,
@@ -367,13 +396,13 @@ class MessageController extends Controller
                     'name' => $r['name'] ?? null,
                 ],
                 'subject' => $msg->subject,
-                'body' => self::render((string) $msg->body, $r['name'] ?? null),
-                'status' => 'sent',
+                'body' => $body,
+                'status' => $ok ? 'sent' : 'failed',
                 'template_id' => $msg->template_id,
                 'sent_at' => now(),
             ]);
 
-            $msg->update(['done' => true, 'sent_at' => now(), 'status' => 'sent']);
+            $msg->update(['done' => true, 'sent_at' => now(), 'status' => $ok ? 'sent' : 'failed']);
             return $msg;
         });
 

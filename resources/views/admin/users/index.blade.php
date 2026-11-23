@@ -31,11 +31,12 @@
     const PAL = [["1F4E9E","E3ECFA"],["0F7A3D","E1F5E9"],["B45309","FDEFD8"],["6D28D9","EDE5FC"],["BE123C","FCE4EA"],["0E7490","DAF2F7"]];
     async function xlsx(file, sheets){ if(!window.ExcelJS){ alert('Excel library could not be loaded.'); return; } const wb=new ExcelJS.Workbook(), used={}; const thin={style:'thin',color:{argb:'FFCBD5E1'}}, bd={top:thin,left:thin,bottom:thin,right:thin}; sheets.forEach((s,n)=>{ const [c,l]=PAL[n%PAL.length]; let nm=String(s.name||'Sheet').replace(/[\\\/\?\*\[\]:]/g,'-').slice(0,28); used[nm]=(used[nm]||0)+1; if(used[nm]>1) nm+=' '+used[nm]; const ws=wb.addWorksheet(nm,{views:[{showGridLines:false,state:'frozen',ySplit:3}]}); const nc=Math.max((s.head||[]).length,2); ws.mergeCells(1,1,1,nc); const t=ws.getCell(1,1); t.value=s.title||s.name; t.font={bold:true,size:16,color:{argb:'FFFFFFFF'}}; t.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF'+c}}; t.alignment={vertical:'middle',indent:1}; ws.getRow(1).height=32; ws.mergeCells(2,1,2,nc); const sb=ws.getCell(2,1); sb.value=s.sub||('Retirement Plan Karo · '+new Date().toLocaleDateString('en-IN')); sb.font={italic:true,color:{argb:'FF64748B'}}; sb.alignment={indent:1}; const h=ws.getRow(3); h.values=s.head; h.height=24; h.eachCell((k)=>{ k.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF'+c}}; k.font={bold:true,color:{argb:'FFFFFFFF'}}; k.border=bd; k.alignment={vertical:'middle',horizontal:'center'}; }); (s.rows||[]).forEach((r,i)=>{ const row=ws.addRow(r); row.height=20; for(let ci=1;ci<=nc;ci++){ const k=row.getCell(ci); k.border=bd; k.alignment={vertical:'middle',wrapText:true}; k.fill={type:'pattern',pattern:'solid',fgColor:{argb: i%2 ? 'FFFFFFFF':'FF'+l}}; if(typeof k.value==='number' && Math.abs(k.value)>=1000) k.numFmt='#,##0.##'; } }); if(!(s.rows||[]).length) ws.addRow(['No records']); s.head.forEach((x,ci)=>{ const vals=[String(x||'').length+4,...(s.rows||[]).map(r=>String((r||[])[ci]??'').length+3)]; ws.getColumn(ci+1).width=Math.min(52,Math.max(...vals)); }); ws.autoFilter={from:{row:3,column:1},to:{row:3,column:nc}}; }); const buf=await wb.xlsx.writeBuffer(); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})); a.download=file; a.click(); }
     async function exportClients(){
-      const rows = Array.from(document.querySelectorAll('#clients-table tbody tr')).map(tr=>{
-        const t = tr.querySelectorAll('td'); if(!t.length) return null;
-        return [t[0].innerText.trim(), t[1].innerText.trim(), t[2].innerText.trim(), t[3].innerText.trim(), t[4].innerText.trim(), t[5].innerText.trim(), t[6].innerText.trim()];
-      }).filter(Boolean);
-      await xlsx('Client_Records.xlsx', [{ name:'Client Records', title:'Client Records', sub:'Retirement Plan Karo · '+new Date().toLocaleDateString('en-IN')+' · {{ $users->total() }} total' + (@json($q) ? ' · Search: '+@json($q) : ''), head:['Name','Mobile','Email','City','Referral','Joined','Status'], rows }]);
+      try {
+        const res = await fetch({!! json_encode(route('admin.users.export', request()->only(['q']))) !!}, { credentials: 'same-origin', headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+        if (!res.ok) throw new Error('Export failed');
+        const d = await res.json();
+        await xlsx(d.filename, d.sheets);
+      } catch (e) { alert(e.message || 'Export failed'); }
     }
   </script>
 @endpush

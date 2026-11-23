@@ -17,23 +17,77 @@ class UserController extends Controller
     use RecordsActivity;
     public function index(Request $request): View
     {
-        $q = trim((string) $request->query('q', ''));
+        [$q, $verified, $paid, $status] = $this->listFilters($request);
 
-        $users = DB::table('users')
+        $users = $this->listQuery($q, $verified, $paid, $status)->orderByDesc('id')->paginate(30)->withQueryString();
+
+        // same five figures as the design: signups, verified, paying, revenue, failed
+        $kpi = [
+            'signups' => DB::table('users')->count(),
+            'verified' => DB::table('users')->whereNotNull('email_verified_at')->count(),
+            'paid' => DB::table('payments')->where('status', 'success')->distinct()->count('user_id'),
+            'revenue' => (float) DB::table('payments')->where('status', 'success')->sum('amount'),
+            'failed' => DB::table('payments')->where('status', 'failed')->count(),
+        ];
+
+        return view('admin.users.index', compact('users', 'q', 'verified', 'paid', 'status', 'kpi'));
+    }
+
+    /** Every client matching the filters, for Export Excel. */
+    public function export(Request $request): \Illuminate\Http\JsonResponse
+    {
+        [$q, $verified, $paid, $status] = $this->listFilters($request);
+        $rows = $this->listQuery($q, $verified, $paid, $status)->orderByDesc('id')->get()->map(fn ($u) => [
+            trim($u->name . ' ' . $u->surname), $u->mobile, $u->email, $u->city,
+            $u->email_verified_at ? 'Yes' : 'No', $u->referral_code, (string) $u->referred_by_code,
+            (string) $u->stage, implode(', ', json_decode((string) $u->tags, true) ?: []), (string) $u->source,
+            \Illuminate\Support\Carbon::parse($u->created_at)->format('d M Y, h:i A'),
+            $u->last_seen_at ? \Illuminate\Support\Carbon::parse($u->last_seen_at)->format('d M Y, h:i A') : '',
+            $u->status ?? 'Active',
+        ])->all();
+
+        return response()->json([
+            'filename' => 'Client_Records_' . now()->format('Ymd') . '.xlsx',
+            'sheets' => [[
+                'name' => 'Client Records', 'title' => 'Client Records',
+                'sub' => 'Retirement Plan Karo · ' . count($rows) . ' clients' . ($q ? ' · Search: ' . $q : ''),
+                'head' => ['Name', 'Mobile', 'Email', 'City', 'Email verified', 'Referral code', 'Referred by', 'Stage', 'Tags', 'Source', 'Joined', 'Last active', 'Status'],
+                'rows' => $rows,
+            ]],
+        ]);
+    }
+
+    private function listFilters(Request $r): array
+    {
+        return [
+            trim((string) $r->query('q', '')),
+            in_array($r->query('verified'), ['yes', 'no'], true) ? $r->query('verified') : '',
+            in_array($r->query('paid'), ['yes', 'no'], true) ? $r->query('paid') : '',
+            in_array($r->query('status'), ['Active', 'Blocked'], true) ? $r->query('status') : '',
+        ];
+    }
+
+    private function listQuery(string $q, string $verified, string $paid, string $status)
+    {
+        $paidIds = fn ($x) => $x->select('user_id')->from('payments')->where('status', 'success');
+
+        return DB::table('users')
             ->when($q !== '', function ($query) use ($q) {
                 $query->where(function ($w) use ($q) {
                     $w->where('name', 'like', "%{$q}%")
                         ->orWhere('surname', 'like', "%{$q}%")
                         ->orWhere('email', 'like', "%{$q}%")
                         ->orWhere('mobile', 'like', "%{$q}%")
+                        ->orWhere('city', 'like', "%{$q}%")
                         ->orWhere('referral_code', 'like', "%{$q}%");
                 });
             })
-            ->orderByDesc('id')
-            ->paginate(30)
-            ->withQueryString();
-
-        return view('admin.users.index', compact('users', 'q'));
+            ->when($verified === 'yes', fn ($x) => $x->whereNotNull('email_verified_at'))
+            ->when($verified === 'no', fn ($x) => $x->whereNull('email_verified_at'))
+            ->when($paid === 'yes', fn ($x) => $x->whereIn('id', $paidIds))
+            ->when($paid === 'no', fn ($x) => $x->whereNotIn('id', $paidIds))
+            ->when($status === 'Blocked', fn ($x) => $x->where(fn ($w) => $w->where('status', 'Blocked')->orWhereNotNull('suspended_at')))
+            ->when($status === 'Active', fn ($x) => $x->where(fn ($w) => $w->whereNull('status')->orWhere('status', '!=', 'Blocked'))->whereNull('suspended_at'));
     }
 
     public function show(int $id): View
@@ -81,6 +135,8 @@ class UserController extends Controller
         $walletUnlocks = DB::table('wallet_unlocks')->where('user_id', $id)->orderByDesc('expires_at')->orderByDesc('id')->get();
         $userStreak = DB::table('user_streaks')->where('user_id', $id)->first();
         $latestWalletUnlock = $walletUnlocks->first();
+        $messages = DB::table('communication_logs')->where('user_id', $id)
+            ->orderByDesc('sent_at')->orderByDesc('id')->limit(100)->get();
         $activityLogs = collect();
         try {
             if (\Illuminate\Support\Facades\Schema::hasTable('activity_logs')) {
@@ -91,20 +147,36 @@ class UserController extends Controller
         return view('admin.users.show', compact(
             'user','payments','sessions','leads','blobs','reportPts','walletPts','ledger','notes',
             'netWorth','assets','liabilities','incomeExpense','expenses','protection','retirement','goals','family','swp',
-            'toolUsages','portfolio','premiumReports','couponRedemptions','referralsMade','referralBonus','referralLink','referralPointsEarned','walletUnlocks','userStreak','latestWalletUnlock','activityLogs'
+            'toolUsages','portfolio','premiumReports','couponRedemptions','referralsMade','referralBonus','referralLink','referralPointsEarned','walletUnlocks','userStreak','latestWalletUnlock','activityLogs','messages'
         ));
     }
 
     public function update(Request $request, int $id): RedirectResponse
     {
-        $data = $request->validate([
+        $request->merge([
+            'pan' => strtoupper(trim((string) $request->input('pan'))) ?: null,
+            'mobile' => substr(preg_replace('/\D/', '', (string) $request->input('mobile')), -10),
+        ]);
+        $v = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'name' => 'required|string|max:100',
             'surname' => 'nullable|string|max:100',
-            'mobile' => 'required|string|max:15',
-            'email' => 'required|email|max:255',
+            'mobile' => ['required', 'regex:/^[6-9]\d{9}$/', \Illuminate\Validation\Rule::unique('users', 'mobile')->ignore($id)],
+            'email' => ['required', 'email', 'max:255', \Illuminate\Validation\Rule::unique('users', 'email')->ignore($id)],
             'city' => 'nullable|string|max:100',
-            'pan' => 'nullable|string|max:10',
+            'pan' => ['nullable', 'regex:/^[A-Z]{5}\d{4}[A-Z]$/'],
+        ], [
+            'mobile.unique' => 'Another client already uses this mobile number.',
+            'email.unique' => 'Another client already uses this email.',
+            'mobile.regex' => 'Enter a valid 10-digit mobile number.',
+            'pan.regex' => 'PAN format is ABCDE1234F.',
         ]);
+        if ($v->fails()) {
+            // shown in the page's existing notice bar
+            return redirect()->route('admin.users.show', $id)->with('ok', 'Profile not saved: ' . $v->errors()->first());
+        }
+        $data = $v->validated();
+        $data['email'] = strtolower(trim($data['email']));
+        $data['city'] = $data['city'] ?? '';
         DB::table('users')->where('id', $id)->update(array_merge($data, ['updated_at' => now()]));
         $this->recordActivity($id, 'client.profile_updated', 'Client profile updated', ['fields' => array_keys($data)], 'User', $id);
         return redirect()->route('admin.users.show', $id)->with('ok', 'Client profile updated.');
@@ -151,7 +223,7 @@ class UserController extends Controller
             $rows = [];
             foreach (preg_split('/\r?\n/', (string) $txt) as $line) {
                 $line = trim($line); if ($line === '') continue;
-                $age = 0; if (preg_match('/@\s*(\d+(??\.\d+)?)/', $line, $m)) { $age = (float) $m[1]; $line = trim(preg_replace('/@\s*\d+(??\.\d+)?/', '', $line)); }
+                $age = 0; if (preg_match('/@\s*(\d+(?:\.\d+)?)/', $line, $m)) { $age = (float) $m[1]; $line = trim(preg_replace('/@\s*\d+(?:\.\d+)?/', '', $line)); }
                 $parts = preg_split('/\s*[=:]\s*/', $line, 2);
                 $name = trim($parts[0] ?? 'Goal') ?? 'Goal';
                 $cost = isset($parts[1]) ? (float) preg_replace('/[^\d.\-]/', '', $parts[1]) : 0;
@@ -237,12 +309,9 @@ class UserController extends Controller
     public function updatePaymentStatus(Request $request, int $id, int $paymentId)
     {
         $data = $request->validate(['status' => 'required|in:success,failed,pending,refunded']);
-        $upd = ['status' => $data['status'], 'updated_at' => now()];
-        if ($data['status'] === 'success') $upd['paid_at'] = now();
-        DB::table('payments')->where('id', $paymentId)->where('user_id', $id)->update($upd);
-        $labels = ['success' => 'Marked as received.', 'refunded' => 'Recorded as refunded.', 'failed' => 'Marked as failed.', 'pending' => 'Marked as pending.'];
-        $this->recordActivity($id, 'payment.status_updated', $labels[$data['status']] ?? 'Payment updated', ['payment_id'=>$paymentId,'status'=>$data['status']], 'Payment', $paymentId);
-        return redirect()->route('admin.users.show', $id)->with('ok', $labels[$data['status']] ?? 'Payment updated.');
+        abort_unless(DB::table('payments')->where('id', $paymentId)->where('user_id', $id)->exists(), 404);
+        $msg = \App\Support\PaymentEffects::apply($paymentId, $data['status']);
+        return redirect()->route('admin.users.show', $id)->with('ok', $msg);
     }
 
     public function updateSession(Request $request, int $id, int $sessionId)
@@ -300,8 +369,7 @@ class UserController extends Controller
         User::findOrFail($id);
         $data = $request->validate(['note' => 'required|string|max:2000', 'author' => 'nullable|string|max:100']);
         $admin = null;
-        try { $admin = \Illuminate\Support\Facades\Auth::guard('admin')->user(); } catch (\Throwable $e) {}
-        $author = $data['author'] ?? ($admin->name ?? ($admin->email ?? 'Admin'));
+        $author = $data['author'] ?? (\App\Support\AdminAccess::actor()['name'] ?? 'Admin');
         DB::table('client_notes')->insert([
             'user_id' => $id,
             'author' => $author,

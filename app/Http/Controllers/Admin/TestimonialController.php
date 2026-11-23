@@ -255,6 +255,7 @@ class TestimonialController extends Controller
             ['value' => json_encode($feed, JSON_UNESCAPED_UNICODE)]
         );
 
+        \App\Support\VersionHistory::record('Testimonials', "Published version {$version}");
         Activity::log(null, 'testimonial.published', "Testimonials published version {$version}", $feed, 'Setting', 'testimonials_version');
 
         return back()->with('ok', "Published version {$version}. Website shows the new testimonials now.");
@@ -309,7 +310,7 @@ class TestimonialController extends Controller
         ]);
     }
 
-    private function getFeed(): array
+    public function getFeed(): array
     {
         $section = $this->getSectionSettings();
         $testimonials = Testimonial::where('is_active', true)

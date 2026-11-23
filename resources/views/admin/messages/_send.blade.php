@@ -291,11 +291,16 @@
           window.open('https://wa.me/91' + r.phone + '?text=' + encodeURIComponent(render(f.body, r.name, false)), '_blank', 'noopener');
           logSent([r], f);
         } else {
-          const chunk = eligible().slice(0, CHUNK); if (!chunk.length) return;
-          const url = 'https://mail.google.com/mail/?view=cm&fs=1&bcc=' + encodeURIComponent(chunk.map(r => r.email).join(','))
-            + '&su=' + encodeURIComponent(f.subject) + '&body=' + encodeURIComponent(render(f.body, '', true));
-          window.open(url, '_blank', 'noopener');
-          logSent(chunk, f);
+          const rs = eligible(); if (!rs.length) return;
+          if (!confirm('Send this email now to ' + rs.length + ' client(s)? Each person gets their own email.')) return;
+          busy = true; draw();
+          postJson(MSG.sendUrl, {
+            channel: 'em', subject: f.subject, body: f.body, template_id: f.template_id,
+            generic: false, deliver: true, recipients: payloadRecipients(rs)
+          }).then(j => {
+            rs.forEach(r => sent.add(r.key));
+            toast((j.count - (j.failed || 0)) + ' email(s) sent' + (j.failed ? ', ' + j.failed + ' failed (see Activity)' : ''));
+          }).catch(err => toast(err.message)).finally(() => { busy = false; draw(); });
         }
       };
 

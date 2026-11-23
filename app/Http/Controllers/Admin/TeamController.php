@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\TeamMember;
 use App\Support\Activity;
+use App\Support\AdminAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -28,7 +29,13 @@ class TeamController extends Controller
             'mobile' => 'nullable|string|max:20',
             'role_id' => 'required|exists:roles,id',
             'is_active' => 'nullable|boolean',
+            'password' => 'required|string|min:8|max:100',
         ]);
+        $data['email'] = strtolower(trim($data['email']));
+
+        if ($data['role_id'] === 'owner' && !AdminAccess::isOwner()) {
+            return back()->withErrors(['error' => 'Only an Owner can give the Owner role.']);
+        }
 
         $member = TeamMember::create([
             'name' => $data['name'],
@@ -38,6 +45,7 @@ class TeamController extends Controller
             'extra' => null,
             'is_active' => $request->boolean('is_active', true),
             'added_at' => now(),
+            'password' => $data['password'],
         ]);
 
         Activity::log(null, 'team.added', "Team member added: {$member->name} ({$member->role_id})", $member->toArray(), 'TeamMember', $member->id);
@@ -56,15 +64,27 @@ class TeamController extends Controller
             'mobile' => 'nullable|string|max:20',
             'role_id' => 'required|exists:roles,id',
             'is_active' => 'nullable|boolean',
+            'password' => 'nullable|string|min:8|max:100',
         ]);
 
-        $member->update([
+        if ($data['role_id'] !== $oldRole && ($data['role_id'] === 'owner' || $oldRole === 'owner') && !AdminAccess::isOwner()) {
+            return back()->withErrors(['error' => 'Only an Owner can give or take away the Owner role.']);
+        }
+        if ($oldRole === 'owner' && ($data['role_id'] !== 'owner' || !$request->boolean('is_active')) && $this->isLastOwner($member)) {
+            return back()->withErrors(['error' => 'At least one active Owner is required.']);
+        }
+
+        $upd = [
             'name' => $data['name'],
-            'email' => $data['email'],
+            'email' => strtolower(trim($data['email'])),
             'mobile' => $data['mobile'] ?? null,
             'role_id' => $data['role_id'],
             'is_active' => $request->boolean('is_active'),
-        ]);
+        ];
+        if (!empty($data['password'])) {
+            $upd['password'] = $data['password'];
+        }
+        $member->update($upd);
 
         Activity::log(null, 'team.updated', "Team member updated: {$member->name}", [
             'old_role' => $oldRole,
@@ -122,7 +142,7 @@ class TeamController extends Controller
         }
 
         // Prevent deactivating yourself
-        if ($member->email === auth()->user()?->email && !$data['is_active']) {
+        if ($member->email === (AdminAccess::actor()['email'] ?? null) && !$data['is_active']) {
             return back()->withErrors(['error' => 'You cannot deactivate your own account.']);
         }
 
@@ -145,7 +165,7 @@ class TeamController extends Controller
         $oldRole = $member->role_id;
 
         // Only owners can give owner role
-        if ($newRole->id === 'owner' && !auth()->user()?->can('admin')) {
+        if (($newRole->id === 'owner' || $oldRole === 'owner') && !AdminAccess::isOwner()) {
             return back()->withErrors(['error' => 'Only an Owner can give the Owner role.']);
         }
 
@@ -172,6 +192,10 @@ class TeamController extends Controller
 
     public function assignPermissions(Request $request): RedirectResponse
     {
+        // the page sends the ticked boxes as a JSON string
+        if (is_string($request->input('extra'))) {
+            $request->merge(['extra' => json_decode($request->input('extra'), true) ?: []]);
+        }
         $data = $request->validate([
             'id' => 'required|exists:team_members,id',
             'extra' => 'nullable|array',
@@ -184,5 +208,12 @@ class TeamController extends Controller
         Activity::log(null, 'team.permissions_assigned', "Extra permissions assigned to {$member->name}", $data['extra'] ?? [], 'TeamMember', $member->id);
 
         return back()->with('ok', 'Permissions assigned.');
+    }
+
+    private function isLastOwner(TeamMember $member): bool
+    {
+        return !TeamMember::where('role_id', 'owner')->where('is_active', true)
+            ->where('id', '!=', $member->id)->exists()
+            && !\Illuminate\Support\Facades\DB::table('admins')->exists();
     }
 }

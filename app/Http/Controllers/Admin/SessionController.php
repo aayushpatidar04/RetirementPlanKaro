@@ -79,6 +79,52 @@ class SessionController extends Controller
         return view('admin.sessions', compact('sessions', 'from', 'to', 'status', 'tab', 'counts', 'availability', 'previewDates'));
     }
 
+    /**
+     * What the website booking form may offer (Advisory sessions → Availability & Rules):
+     * on/off, bookable dates from tomorrow to the booking window, weekdays (1=Mon..7=Sun),
+     * blocked dates, days already at the daily limit, time slots and call types.
+     */
+    public static function bookingRules(): array
+    {
+        $a = self::availability();
+        $split = fn (string $s, string $re) => array_values(array_filter(array_map('trim', preg_split($re, $s))));
+        $slots = $split($a['slots'], '/\r?\n/') ?: ['Morning (9 am to 12 pm)', 'Afternoon (12 pm to 4 pm)', 'Evening (4 pm to 8 pm)'];
+        $modes = $split($a['modes'], '/[,\r\n]+/') ?: ['Phone call', 'Video call'];
+        $blocked = array_values(array_filter($split($a['blocked'], '/[,\s]+/'), fn ($d) => preg_match('/^\d{4}-\d{2}-\d{2}$/', $d)));
+        $win = max(1, min(90, $a['win'] ?: 14));
+        $min = Carbon::tomorrow()->toDateString();
+        $max = Carbon::today()->addDays($win)->toDateString();
+
+        $full = [];
+        if ($a['max'] > 0) {
+            $full = DB::table('guidance_sessions')->whereBetween('date', [$min, $max])
+                ->whereNotIn('status', ['cancelled'])
+                ->selectRaw('date, COUNT(*) as c')->groupBy('date')->havingRaw('COUNT(*) >= ?', [$a['max']])
+                ->pluck('date')->map(fn ($d) => substr((string) $d, 0, 10))->all();
+        }
+
+        return [
+            'on' => $a['on'], 'days' => $a['days'] ?: [1, 2, 3, 4, 5, 6], 'slots' => $slots, 'modes' => $modes,
+            'blocked' => $blocked, 'full' => $full, 'min' => $min, 'max' => $max,
+            'max_per_day' => $a['max'], 'duration' => $a['dur'], 'notice' => $a['notice'],
+        ];
+    }
+
+    /** Why a date can't be booked, or null when it can. */
+    public static function dateProblem(string $date, ?array $rules = null): ?string
+    {
+        $r = $rules ?? self::bookingRules();
+        if (!$r['on']) return 'Online booking is closed right now. Please try again later.';
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $date < $r['min'] || $date > $r['max']) {
+            return 'Pick a date between ' . Carbon::parse($r['min'])->format('d M') . ' and ' . Carbon::parse($r['max'])->format('d M') . '.';
+        }
+        if (!in_array((int) Carbon::parse($date)->dayOfWeekIso, $r['days'], true)) return 'Sessions are not held on ' . Carbon::parse($date)->format('l') . 's. Please pick another day.';
+        if (in_array($date, $r['blocked'], true)) return 'This date is not available. Please pick another day.';
+        if (in_array($date, $r['full'], true)) return 'This date is fully booked. Please pick another day.';
+
+        return null;
+    }
+
     private function previewDates(array $a): array
     {
         if (empty($a['on'])) return [];
@@ -121,6 +167,7 @@ class SessionController extends Controller
             'notice' => (string)($data['notice'] ?? ''),
         ];
         Settings::set('session_availability', json_encode($a, JSON_UNESCAPED_UNICODE));
+        \App\Support\VersionHistory::record('Session Availability', 'Availability and booking rules saved');
         Activity::log(null, 'sessions.availability_saved', 'Advisory session availability saved', $a, 'Settings', 'session_availability');
         return redirect()->route('admin.sessions', ['tab' => 'availability'])->with('ok', 'Availability saved.');
     }

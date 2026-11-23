@@ -1,4 +1,5 @@
-﻿@extends('admin.layout')
+@extends('admin.layout')
+@include('admin.partials.popup-backend')
 
 @section('title', 'Client Profile')
 
@@ -602,10 +603,6 @@
           class="pill bad">No</span>@endif</dd>
         </div>
         <div>
-          <dt>Mobile verified</dt>
-          <dd><span class="pill bad">No</span></dd>
-        </div>
-        <div>
           <dt>Language</dt>
           <dd>{{ $user->language ?? ($user->lang ?? '—') }}</dd>
         </div>
@@ -615,7 +612,7 @@
         </div>
         <div>
           <dt>Country</dt>
-          <dd>{{ $user->country ?? '—' }}</dd>
+          <dd>{{ $netWorth->country ?? '—' }}</dd>
         </div>
         <div>
           <dt>Residential status</dt>
@@ -631,11 +628,11 @@
         </div>
         <div>
           <dt>Age</dt>
-          <dd>{{ $user->age ?? '—' }}</dd>
+          <dd>{{ $netWorth->age ?? '—' }}</dd>
         </div>
         <div>
           <dt>PAN (masked)</dt>
-          <dd>{{ $user->pan_masked ?? ($user->pan ?? '—') }}</dd>
+          <dd>{{ $user->pan ? substr($user->pan, 0, 5) . '****' . substr($user->pan, -1) : '—' }}</dd>
         </div>
         <div>
           <dt>Account status</dt>
@@ -647,20 +644,21 @@
         </div>
         <div>
           <dt>Last active</dt>
-          <dd>{{ $user->updated_at ? \Illuminate\Support\Carbon::parse($user->updated_at)->format('d M Y, H:i') : '—' }}
+          @php $la = $user->last_seen_at ?? ($user->last_login_at ?? null); @endphp
+          <dd>{{ $la ? \Illuminate\Support\Carbon::parse($la)->format('d M Y, H:i') : '—' }}
           </dd>
         </div>
         <div>
           <dt>Source</dt>
-          <dd>{{ $user->source ?? ($user->src ?? '—') }}</dd>
+          <dd>{{ $user->source ?? '—' }}</dd>
         </div>
         <div>
           <dt>Signup IP</dt>
-          <dd>{{ $user->signup_ip ?? ($user->ip ?? '—') }}</dd>
+          <dd>{{ $user->signup_ip ?? '—' }}</dd>
         </div>
         <div>
           <dt>Device</dt>
-          <dd>{{ $user->device ?? ($user->dev ?? '—') }}</dd>
+          <dd>{{ $user->device ?? '—' }}</dd>
         </div>
       </div>
     </div>
@@ -690,7 +688,7 @@
         </div>
         <div>
           <dt>Streak</dt>
-          <dd>{{ $user->streak ?? '—' }}</dd>
+          <dd>{{ $userStreak ? ($userStreak->day . ' day(s) · last ' . \Illuminate\Support\Carbon::parse($userStreak->last_date)->format('d M')) : '—' }}</dd>
         </div>
       </div>
     </div>
@@ -1159,7 +1157,19 @@
   <div id="tab-messages" style="display:none">
     <div class="card">
       <h3>Messages &amp; notes</h3>
-      <div class="em">Messages sent from the composer open WhatsApp/mail clients; server-side message history is not recorded unless logged by an integration.</div>
+      @if(isset($messages) && $messages->count())
+        <div class="tl">
+          @foreach($messages as $m)
+            @php $rc = is_array($m->recipient) ? $m->recipient : (json_decode((string) $m->recipient, true) ?: []); @endphp
+            <div>
+              <b>{{ $m->channel === 'em' ? 'Email' : 'WhatsApp' }} · {{ $m->subject ?: 'Message' }}</b><small>{{ \Illuminate\Support\Carbon::parse($m->sent_at ?? $m->created_at)->format('d M Y, H:i') }} · {{ $m->channel === 'em' ? ($rc['email'] ?? '') : ($rc['mobile'] ?? '') }} · {{ $m->status }}</small>
+              <div style="margin-top:4px;white-space:pre-line">{{ \Illuminate\Support\Str::limit($m->body, 300) }}</div>
+            </div>
+          @endforeach
+        </div>
+      @else
+        <div class="em">No messages sent to this client yet.</div>
+      @endif
     </div>
     <div class="card">
       <h3>Notes</h3>
@@ -1218,7 +1228,18 @@
     </div>
     <div class="card">
       <h3>Messages sent</h3>
-      <div class="sc"><div class="em">No server-side message history. WhatsApp opens wa.me and email opens the mail client from the composer.</div></div>
+      @if(isset($messages) && $messages->count())
+        <div class="sc"><table>
+          <thead><tr><th>When</th><th>Channel</th><th>Subject</th><th>Status</th></tr></thead>
+          <tbody>
+            @foreach($messages as $m)
+              <tr><td>{{ \Illuminate\Support\Carbon::parse($m->sent_at ?? $m->created_at)->format('d M Y, H:i') }}</td><td>{{ $m->channel === 'em' ? 'Email' : 'WhatsApp' }}</td><td>{{ $m->subject ?: '—' }}</td><td>{{ $m->status }}</td></tr>
+            @endforeach
+          </tbody>
+        </table></div>
+      @else
+        <div class="sc"><div class="em">No messages sent to this client yet.</div></div>
+      @endif
     </div>
     <div class="card">
       <h3>Internal notes</h3>
@@ -1396,44 +1417,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
   <script>
     (function () {
-      const CT = [
-        { n: "Welcome", t: "Namaste {name}\n\nRetirement Plan Karo me aapka swagat hai! Aapke account me 600 welcome points add ho gaye hain.\n\nApna free retirement plan banayein {link}\n– Team Retirement Plan Karo" },
-        { n: "Plan incomplete reminder", t: "Hi {name},\n\nAapne Retirement Plan Karo par account banaya tha, lekin abhi tak apna retirement plan complete nahi kiya.\n\nSirf 4 simple steps, 5 minute\nFree retirement corpus & SIP calculation\n600 welcome points aapke account me wait kar rahe hain\n\nAbhi plan banayein: {link}\n\nKoi sawal ho to bas reply karein.\n– Team Retirement Plan Karo" },
-        { n: "Payment failed", t: "Hi {name},\n\nAapka {purpose} payment complete nahi ho paya.\n\nKoi baat nahi Aap yahan se dobara try kar sakte hain: {link}\n\nAgar paise kat gaye hain to 2–3 din me auto-refund ho jayenge. Madad chahiye to reply karein.\n– Team Retirement Plan Karo" },
-        { n: "Report ready", t: "Hi {name}, aapki Premium Retirement Report ready hai\nDownload karein: {link}\n– Team Retirement Plan Karo" },
-        { n: "Session confirmation", t: "Hi {name}, aapka guidance session confirm ho gaya hai.\n\nHamari team aapko call / video link share karegi. Kisi badlav ke liye bas reply karein.\n– Team Retirement Plan Karo" },
-        { n: "Hot lead follow-up", t: "Hi {name}, aapne retirement guidance me interest dikhaya tha\n\nKya hum kal ek chhota call fix kar dein? Aapko kaunsa time suit karega? Reply karein.\n– Team Retirement Plan Karo" },
-        { n: "Inactive user nudge", t: "Hi {name}, kaafi din se aap Retirement Plan Karo par nahi aaye.\n\nAapka plan wahin save hai — 2 minute me update karein {link}\n– Team Retirement Plan Karo" },
-        { n: "Coupon / promotion", t: "Hi {name}\n\nSirf aapke liye special offer: coupon code *{coupon}* use karein aur Premium Report / Guidance Session par discount payein.\n\nAbhi use karein {link}\n– Team Retirement Plan Karo" },
-        { n: "Festival wishes", t: "Hi {name}, aapko aur parivaar ko tyohaar ki hardik shubhkamnayein\nIs saal apne retirement ko bhi surakshit banayein {link}\n– Team Retirement Plan Karo" },
-        { n: "Referral update", t: "Congratulations {name},\n\nAapke referral link se naye signups hue hain.\n\nPoints check karein, Aur dosto ko invite karein: {link}\n– Team Retirement Plan Karo" },
-        { n: "Greeting / follow-up", t: "Namaste {name}\n\nRetirement Plan Karo se baat kar rahe hain. Aapke retirement plan me madad chahiye to bas reply karein.\n– Team Retirement Plan Karo" },
-        { n: "Quote · Term Insurance", t: "Hi {name}, aapki Term Insurance request ke liye shukriya\n\nAapke details ke hisaab se best options:\n1) ______ – ₹____ /year\n2) ______ – ₹____ /year\n\nCover aur premium compare karke plan select karein.\nAgle step ke liye bas reply karein.\n– Team Retirement Plan Karo" },
-        { n: "Quote · Health Insurance", t: "Hi {name}, aapki Health Insurance request ke liye shukriya\n\nAapke details ke hisaab se best options:\n1) ______ – ₹____ /year\n2) ______ – ₹____ /year\n\nCover, network hospitals aur waiting period compare karein.\nAgle step ke liye bas reply karein.\n– Team Retirement Plan Karo" },
-        { n: "Quote · Car / Bike Insurance", t: "Hi {name}, aapki Car / Bike Insurance request ke liye shukriya\n\nAapke details ke hisaab se best options:\n1) ______ – ₹____ /year\n2) ______ – ₹____ /year\n\nAapki policy expiry se pehle renew karna best rahega.\nAgle step ke liye bas reply karein.\n– Team Retirement Plan Karo" },
-        { n: "Quote · Credit Card", t: "Hi {name}, aapki Credit Card request ke liye shukriya\n\nAapke details ke hisaab se best options:\n1) ______ – ₹____ /year\n2) ______ – ₹____ /year\n\nFees, rewards aur eligibility compare karein.\nAgle step ke liye bas reply karein.\n– Team Retirement Plan Karo" },
-        { n: "Quote · Personal Loan", t: "Hi {name}, aapki Personal Loan request ke liye shukriya\n\nAapke details ke hisaab se best options:\n1) ______ – ₹____ /year\n2) ______ – ₹____ /year\n\nInterest rate aur processing fee compare karein.\nAgle step ke liye bas reply karein.\n– Team Retirement Plan Karo" },
-        { n: "Quote · Loan Against Mutual Fund", t: "Hi {name}, aapki Loan Against Mutual Fund request ke liye shukriya\n\nAapke details ke hisaab se best options:\n1) ______ – ₹____ /year\n2) ______ – ₹____ /year\n\nAapke funds becheye bina low-interest loan mil sakta hai.\nAgle step ke liye bas reply karein.\n– Team Retirement Plan Karo" },
-
-        { n: "Welcome email", sub: "Welcome to Retirement Plan Karo, {name}!", t: "Hi {name},\n\nRetirement Plan Karo me aapka swagat hai!\n\nAapke account me 600 welcome points add ho gaye hain. Sirf 5 minute me aap ye sab kar sakte hain:\n  • Apna retirement corpus aur SIP calculate karein\n  • Life goals aur family ka plan banayein\n  • Free calculators (SIP, Tax, Home Loan EMI) use karein\n\nAbhi shuru karein: {link}\n\nKoi bhi sawal ho to is mail ka reply karein, hum madad karenge. \n\nWarm regards,\nTeam Retirement Plan Karo\nretirementplankaro.com", ch: "em" },
-        { n: "Plan incomplete reminder", sub: "{name}, aapka retirement plan adhura hai", t: "Hi {name},\n\nAapne Retirement Plan Karo par account banaya tha, lekin plan abhi complete nahi hua. Sirf 4 simple steps baaki hain:\n  Net worth aur expenses\n  Retirement age aur investment\n  Life goals\n  Free report aur SIP suggestion\n\nPlan complete karne ke liye yahan click karein: {link}\n\nAapke 600 welcome points bhi wahin wait kar rahe hain.\n\nWarm regards,\nTeam Retirement Plan Karo\nretirementplankaro.com", ch: "em" },
-        { n: "Payment failed", sub: "Aapka ₹{amount} ka {purpose} payment complete nahi hua", t: "Hi {name},\n\nAapka ₹{amount} ka {purpose} payment ({date}) complete nahi ho paya. Koi baat nahi, aap dobara try kar sakte hain: {link}\n\nDhyan dein:\n • Agar paise kat gaye hain to 2–3 din me auto-refund ho jayenge.\n • Payment dobara fail ho to UPI ya card badal kar try karein.\n\nAgar koi dikkat ho to hume is mail ka reply karein.\n\nWarm regards,\nTeam Retirement Plan Karo\nretirementplankaro.com", ch: "em" },
-        { n: "Report ready", sub: "Aapki Premium Retirement Report ready hai", t: "Hi {name},\n\nAapki Premium Retirement Report ready hai.\n\nIsme aapko milega:\n• Corpus needed aur shortfall ka poora hisaab\n• Monthly SIP aur SWP income plan\n• Goal-wise readiness\n\nReport download karein: {link}\n\nReport samajhne me madad chahiye to guidance session book kar sakte hain.\n\nWarm regards,\nTeam Retirement Plan Karo\nretirementplankaro.com", ch: "em" },
-        { n: "Session confirmation", sub: "Aapka guidance session confirm ho gaya", t: "Hi {name},\n\nAapka guidance session confirm ho gaya hai.\n\nKya karein:\n• Session ke time par phone / video par available rahein\n• Apna planner aur report saath rakhein\n• Koi sawal ho to pehle se likh lein\n\nHamari team call / video link WhatsApp par share karegi. Badlav ke liye is mail ka reply karein.\n\nWarm regards,\nTeam Retirement Plan Karo\nretirementplankaro.com", ch: "em" },
-        { n: "Hot lead follow-up", sub: "{name} kya hum aapke retirement plan par baat karein?", t: "Hi {name},\n\nAapne retirement guidance me interest dikhaya tha, isliye hum follow-up kar rahe hain.\n\nEk chhote 20–30 minute ke call me hum:\n• Aapka retirement corpus aur gap samjhayenge\n• Aapke liye sahi SIP / investment mix batayenge\n• Aapke sawalon ke jawab denge\n\nBas bataiye aapko kaunsa din aur time suit karega.\n\nWarm regards,\nTeam Retirement Plan Karo\nretirementplankaro.com", ch: "em" },
-        { n: "Inactive user nudge", sub: "{name}, aapka plan aapka intezaar kar raha hai", t: "Hi {name},\n\nKaafi din se aap Retirement Plan Karo par nahi aaye. Aapka plan wahin save hai.\n\nNaya kya hai:\n• Income Tax Calculator (New Regime FY 2026-27)\n• SIP aur Home Loan EMI Calculators\n• Budget Planner\n\nWapas aayein: {link}\n\nWarm regards,\nTeam Retirement Plan Karo\nretirementplankaro.com", ch: "em" },
-        { n: "Coupon / promotion", sub: "Aapke liye special coupon: LAUNCH20", t: "Hi {name},\n\nAapke liye ek special offer.\n\nCoupon Code: LAUNCH20\nLaagu hai: Premium Report aur Guidance Session par.\n\nCheckout ke time ye code daalein: {link}\n\nOffer limited time ke liye hai, isliye der na karein.\n\nWarm regards,\nTeam Retirement Plan Karo\nretirementplankaro.com", ch: "em" },
-        { n: "Festival wishes", sub: "Tyohaar ki hardik shubhkamnayein, {name}!", t: "Hi {name},\n\nAapko aur aapke parivaar ko tyohaar ki hardik shubhkamnayein.\n\nIs tyohaar par apne aur parivaar ke surakshit bhavishya ka sankalp lein. Aapka retirement plan banane me hum madad ke liye taiyar hain.\n\nShuruaat karein: {link}\n\nWarm regards,\nTeam Retirement Plan Karo\nretirementplankaro.com", ch: "em" },
-        { n: "Referral update", sub: "Aapke dost join kar chuke hain", t: "Hi {name},\n\nShukriya! Aapke referral link se ab tak {referral_count} dost join kar chuke hain ({referral_names}).\n\nAapko {points} points mile hain. Aur dosto ko invite karne ke liye apna link share karein:\n{link}\n\nJitne zyada dost, utne zyada rewards!\n\nWarm regards,\nTeam Retirement Plan Karo\nretirementplankaro.com", ch: "em" },
-        { n: "Quote · Term Insurance", sub: "Aapke Term Insurance quotes", t: "Hi {name},\n\nAapne hamare paas Term Insurance ke liye quote request bheji thi, uske liye dhanyavaad. Aapke diye gaye details ke aadhar par humne best options shortlist kiye hain:\n\n1) {plan_1_name} – ₹{plan_1_premium}/year\n2) {plan_2_name} – ₹{plan_2_premium}/year\n\nCover aur premium compare karke plan select karein.\n\nAgle step ke liye aapko ID proof, address proof, income proof (salary slip / ITR) aur recent photo chahiye hongi. Aap inhe is mail ke reply me ya WhatsApp par bhej sakte hain.\n\nKoi sawal ho ya options compare karne me madad chahiye to bataiye, hum call par samjha denge.\n\nWarm regards,\nTeam Retirement Plan Karo\nretirementplankaro.com", ch: "em" },
-        { n: "Quote · Health Insurance", sub: "Aapke Health Insurance quotes", t: "Hi {name},\n\nAapne hamare paas Health Insurance ke liye quote request bheji thi, uske liye dhanyavaad. Aapke diye gaye details ke aadhar par humne best options shortlist kiye hain:\n\n1) {option_1_name} – ₹{option_1_premium}/year\n2) {option_2_name} – ₹{option_2_premium}/year\n\nCover, network hospitals aur waiting period compare karein.\n\nAgle step ke liye aapko sabhi members ki age aur ID proof, aur kisi pehle se chal rahi bimari ki jaankari chahiye hongi. Aap inhe is mail ke reply me ya WhatsApp par bhej sakte hain.\n\nKoi sawal ho ya options compare karne me madad chahiye to bataiye, hum call par samjha denge.\n\nWarm regards,\nTeam Retirement Plan Karo\nretirementplankaro.com", ch: "em" },
-        { n: "Quote · Car / Bike Insurance", sub: "Aapke Car / Bike Insurance quotes", t: "Hi {name},\n\nAapne hamare paas Car / Bike Insurance ke liye quote request bheji thi, uske liye dhanyavaad. Aapke diye gaye details ke aadhar par humne best options shortlist kiye hain:\n\n1) {option_1_name} – ₹{option_1_premium}/year\n2) {option_2_name} – ₹{option_2_premium}/year\n\nAapki policy expiry se pehle renew karna best rahega.\n\nAgle step ke liye aapko RC copy, purani policy ki copy aur ID proof chahiye hongi. Aap inhe is mail ke reply me ya WhatsApp par bhej sakte hain.\n\nKoi sawal ho ya options compare karne me madad chahiye to bataiye, hum call par samjha denge.\n\nWarm regards,\nTeam Retirement Plan Karo\nretirementplankaro.com", ch: "em" },
-        { n: "Quote · Credit Card", sub: "Aapke Credit Card quotes", t: "Hi {name},\n\nAapne hamare paas Credit Card ke liye quote request bheji thi, uske liye dhanyavaad. Aapke diye gaye details ke aadhar par humne best options shortlist kiye hain:\n\n1) {option_1_name} – ₹{option_1_fee}/year\n2) {option_2_name} – ₹{option_2_fee}/year\n\nFees, rewards aur eligibility compare karein.\n\nAgle step ke liye aapko PAN, Aadhaar aur income proof (salary slip / ITR) chahiye hongi. Aap inhe is mail ke reply me ya WhatsApp par bhej sakte hain.\n\nKoi sawal ho ya options compare karne me madad chahiye to bataiye, hum call par samjha denge.\n\nWarm regards,\nTeam Retirement Plan Karo\nretirementplankaro.com", ch: "em" },
-        { n: "Quote · Personal Loan", sub: "Aapke Personal Loan quotes", t: "Hi {name},\n\nAapne hamare paas Personal Loan ke liye quote request bheji thi, uske liye dhanyavaad. Aapke diye gaye details ke aadhar par humne best options shortlist kiye hain:\n\n1) {option_1_name} – ₹{option_1_rate}/year\n2) {option_2_name} – ₹{option_2_rate}/year\n\nInterest rate aur processing fee compare karein.\n\nAgle step ke liye aapko PAN, Aadhaar, 3 mahine ki salary slip aur 6 mahine ka bank statement chahiye hongi. Aap inhe is mail ke reply me ya WhatsApp par bhej sakte hain.\n\nKoi sawal ho ya options compare karne me madad chahiye to bataiye, hum call par samjha denge.\n\nWarm regards,\nTeam Retirement Plan Karo\nretirementplankaro.com", ch: "em" },
-        { n: "Quote · Loan Against Mutual Fund", sub: "Aapke Loan Against Mutual Fund quotes", t: "Hi {name},\n\nAapne hamare paas Loan Against Mutual Fund ke liye quote request bheji thi, uske liye dhanyavaad. Aapke diye gaye details ke aadhar par humne best options shortlist kiye hain:\n\n1) {option_1_name} – ₹{option_1_rate}/year\n2) {option_2_name} – ₹{option_2_rate}/year\n\nAapke funds beche bina low-interest loan mil sakta hai.\n\nAgle step ke liye aapko PAN, Aadhaar aur mutual fund holdings statement (CAS) chahiye hongi. Aap inhe is mail ke reply me ya WhatsApp par bhej sakte hain.\n\nKoi sawal ho ya options compare karne me madad chahiye to bataiye, hum call par samjha denge.\n\nWarm regards,\nTeam Retirement Plan Karo\nretirementplankaro.com", ch: "em" },
-
-      ];
-      const U = { name: @json($fullname ?? 'Customer'), mobile: @json($user->mobile ?? ''), email: @json($user->email ?? ''), link: location.origin + '/' };
+      const CT = @json(\App\Support\PopupTemplates::all());
+      const U = { name: @json($fullname ?? 'Customer'), mobile: @json($user->mobile ?? ''), email: @json($user->email ?? ''), link: location.origin + '/', userId: {{ (int) $user->id }} };
       if (!document.getElementById('cmo')) {
         const m = document.createElement('div'); m.id = 'cmo'; m.className = 'ov';
         m.innerHTML = '<div class="mo" style="width:min(920px,98vw)"><h3 id="ctit">WhatsApp · ' + (U.name || '') + '</h3><p style="color:var(--mut);margin:-4px 0 8px">+' + (U.mobile || '') + '</p><label style="font-size:12.5px;color:var(--mut);font-weight:600">Template<select class="in" id="ctsel"></select></label><textarea class="in" id="ctext" rows="10" style="margin-top:8px"></textarea><p style="color:var(--mut);font-size:12px;margin:4px 0 0" id="chelp">Preview · personalised for this client</p><div class="ac" style="flex-wrap:wrap"><button type="button" class="btn" id="fc">Cancel</button><button type="button" class="btn" id="cn">+ New template</button><button type="button" class="btn" id="ce">Edit template</button><button type="button" class="btn wa" id="ws">OK · Send on WhatsApp</button></div></div>';
@@ -1481,9 +1466,9 @@
       window.oc = function (c) { ch = c || 'wa'; k = L()[0] ? L()[0][1] : 0; raw = false; draw(); ov.classList.add('o'); };
       $('fc').onclick = function () { ov.classList.remove('o'); };
       $('ctsel').onchange = function () { k = +this.value; raw = false; draw(); };
-      $('ce').onclick = function () { if (raw) { CT[k].t = $('ctext').value; raw = false; alert('Template saved'); draw(); return; } raw = true; draw(); };
-      $('cn').onclick = function () { const n = prompt('Template Name'); if (!n) return; CT.push({ n, t: 'Hi {name}, ' }); k = CT.length - 1; raw = true; draw(); };
-      $('ws').onclick = function () { if (raw) { alert('Click Save template first'); return; } if (ch === 'wa') { const num = (U.mobile || '').replace(/\D/g, '').slice(-10); if (num.length < 10) { alert('Enter correct mobile number '); return; } window.open('https://wa.me/91' + num + '?text=' + encodeURIComponent($('ctext').value), '_blank'); } else { window.location.href = 'mailto:' + encodeURIComponent(U.email) + '?subject=' + (CT[k].sub ? fill(CT[k].sub) : CT[k].n) + '&body=' + encodeURIComponent($('ctext').value); } ov.classList.remove('o'); };
+      $('ce').onclick = function () { if (raw) { CT[k].t = $('ctext').value; raw = false; rpkTplSave(CT[k]); draw(); return; } raw = true; draw(); };
+      $('cn').onclick = function () { const n = prompt('Template Name'); if (!n) return; CT.push({ n, t: 'Hi {name}, ', ch: ch }); rpkTplNew(CT[CT.length - 1]); k = CT.length - 1; raw = true; draw(); };
+      $('ws').onclick = function () { if (raw) { alert('Click Save template first'); return; } if (ch === 'wa') { const num = (U.mobile || '').replace(/\D/g, '').slice(-10); if (num.length < 10) { alert('Enter correct mobile number '); return; } window.open('https://wa.me/91' + num + '?text=' + encodeURIComponent($('ctext').value), '_blank'); rpkLog('wa', U, $('ctext').value, CT[k]); } else { rpkLog('em', U, $('ctext').value, CT[k], (CT[k] && CT[k].sub) ? fill(CT[k].sub) : (CT[k] ? CT[k].n : 'Message')); } ov.classList.remove('o'); };
       const tabs = document.querySelectorAll('#custTabs button'); tabs.forEach(btn => { btn.addEventListener('click', () => { tabs.forEach(b => b.classList.remove('on')); btn.classList.add('on'); const tab = btn.dataset.tab;['profile', 'planner', 'tools', 'payments', 'sessions', 'wallet', 'referrals', 'messages', 'activity'].forEach(t => { const el = document.getElementById('tab-' + t); if (el) el.style.display = (t === tab) ? 'block' : 'none'; }); }); });
       document.querySelectorAll('.dd summary').forEach(s => { s.addEventListener('click', e => { e.preventDefault(); const d = s.parentElement; d.open = !d.open; }); });
 

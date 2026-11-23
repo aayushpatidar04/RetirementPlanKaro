@@ -3,90 +3,68 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Setting;
 use App\Models\VersionSnapshot;
 use App\Support\Activity;
+use App\Support\VersionHistory;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
+/**
+ * Published Versions. A version is saved automatically each time Pricing, Points,
+ * Discount Codes, Referral settings, Session availability, Investment Partners or
+ * Testimonials are saved/published (see App\Support\VersionHistory).
+ */
 class VersionController extends Controller
 {
     public function index(Request $request): View
     {
-        $filterArea = $request->query('area');
-        $areas = VersionSnapshot::getAreas();
-        
-        $query = VersionSnapshot::query()->orderBy('version', 'desc');
-        if ($filterArea) {
-            $query->where('area', $filterArea);
-        }
-        $versions = $query->get();
+        $this->baseline();
 
-        // Current data for each area
+        $filterArea = $request->query('area');
+        $areas = VersionHistory::AREAS;
+
+        $versions = $this->withDiffs($filterArea);
+
         $currentData = [];
-        foreach ($areas as $areaName => $settingKeys) {
-            $currentData[$areaName] = $this->getAreaData($areaName, $settingKeys);
+        foreach (array_keys($areas) as $area) {
+            $currentData[$area] = VersionHistory::capture($area);
         }
 
         return view('admin.versions', compact('versions', 'areas', 'filterArea', 'currentData'));
     }
 
-    private function getAreaData(string $areaName, array $settingKeys): array
-    {
-        $data = [];
-        foreach ($settingKeys as $key) {
-            $setting = Setting::where('key', $key)->first();
-            if ($setting && $setting->value) {
-                $data[$key] = json_decode($setting->value, true);
-            }
-        }
-        return $data;
-    }
-
-    public function restore(Request $request): RedirectResponse
+    public function restore(Request $request): RedirectResponse|JsonResponse
     {
         $data = $request->validate([
             'version' => 'required|integer|exists:version_snapshots,version',
         ]);
 
         $snapshot = VersionSnapshot::where('version', $data['version'])->firstOrFail();
-        
-        // Apply the snapshot data to settings
-        $this->applySnapshot($snapshot);
-        
-        // Create new snapshot with current data
-        $newVersion = $this->createSnapshotForArea($snapshot->area, "Restored from version {$snapshot->version}");
+        VersionHistory::restore($snapshot);
+        $new = VersionHistory::record($snapshot->area, "Restored from version {$snapshot->version}");
 
         Activity::log(null, 'version.restored', "Restored {$snapshot->area} to version {$snapshot->version}", [
             'restored_version' => $snapshot->version,
-            'new_version' => $newVersion->version,
+            'new_version' => $new?->version,
         ], 'VersionSnapshot', $snapshot->version);
 
-        return back()->with('ok', "Version {$snapshot->version} restored. New version {$newVersion->version} created.");
+        $msg = "{$snapshot->area} restored to version {$snapshot->version}. The website uses it now.";
+
+        return $request->expectsJson() ? response()->json(['ok' => true, 'message' => $msg]) : back()->with('ok', $msg);
     }
 
-    public function export(Request $request): RedirectResponse
+    public function export(Request $request): JsonResponse
     {
-        $filterArea = $request->query('area');
-        
-        $query = VersionSnapshot::query()->orderBy('version', 'desc');
-        if ($filterArea) {
-            $query->where('area', $filterArea);
-        }
-        $versions = $query->get();
-
-        $rows = $versions->map(function ($v) {
-            $status = $this->isCurrent($v) ? 'Current' : '';
-            return [
-                'v' . $v->version,
-                $v->created_at->format('d M Y H:i'),
-                $v->area,
-                $v->description,
-                $this->formatDiff($v->data),
-                $status,
-            ];
-        })->toArray();
+        $rows = $this->withDiffs($request->query('area'))->map(fn ($v) => [
+            'v' . $v->version,
+            $v->created_at?->format('d M Y H:i'),
+            $v->area,
+            $v->description,
+            $v->summary,
+            VersionHistory::same($v->data, VersionHistory::capture($v->area)) ? 'Current' : '',
+        ])->values()->all();
 
         return response()->json([
             'filename' => 'Website_Versions_' . now()->format('Ymd') . '.xlsx',
@@ -99,42 +77,26 @@ class VersionController extends Controller
         ]);
     }
 
-    private function applySnapshot(VersionSnapshot $snapshot): void
+    /** Versions newest first, each with a "summary" of what changed vs. the version before it. */
+    private function withDiffs(?string $area)
     {
-        $areaKeys = VersionSnapshot::getAreas()[$snapshot->area] ?? [];
-        
-        foreach ($areaKeys as $key) {
-            if (isset($snapshot->data[$key])) {
-                Setting::updateOrCreate(
-                    ['key' => $key],
-                    ['value' => json_encode($snapshot->data[$key], JSON_UNESCAPED_UNICODE)]
-                );
+        $all = VersionSnapshot::query()->orderBy('version')->get();
+        $prev = [];
+        foreach ($all as $v) {
+            $v->setAttribute('summary', VersionHistory::diff($prev[$v->area] ?? null, (array) $v->data));
+            $prev[$v->area] = (array) $v->data;
+        }
+
+        return $all->when($area, fn ($c) => $c->where('area', $area))->sortByDesc('version')->values();
+    }
+
+    /** First visit: store the live state of every area, so there is something to go back to. */
+    private function baseline(): void
+    {
+        foreach (array_keys(VersionHistory::AREAS) as $area) {
+            if (!VersionSnapshot::where('area', $area)->exists()) {
+                VersionHistory::record($area, 'Starting point (live settings when versioning was switched on)');
             }
         }
-    }
-
-    private function createSnapshotForArea(string $area, string $description): VersionSnapshot
-    {
-        $areaKeys = VersionSnapshot::getAreas()[$area] ?? [];
-        $data = $this->getAreaData($area, $areaKeys);
-        
-        return VersionSnapshot::createSnapshot($area, $data, $description);
-    }
-
-    private function isCurrent(VersionSnapshot $snapshot): bool
-    {
-        $areaKeys = VersionSnapshot::getAreas()[$snapshot->area] ?? [];
-        $currentData = $this->getAreaData($snapshot->area, $areaKeys);
-        
-        return json_encode($currentData) === json_encode($snapshot->data);
-    }
-
-    private function formatDiff(array $data): string
-    {
-        $parts = [];
-        foreach ($data as $key => $value) {
-            $parts[] = $key . ': ' . json_encode($value, JSON_UNESCAPED_UNICODE);
-        }
-        return implode("\n", $parts);
     }
 }

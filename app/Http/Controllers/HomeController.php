@@ -1,7 +1,9 @@
 <?php
 
 namespace App\Http\Controllers;
+use App\Support\Settings;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class HomeController extends Controller
 {
@@ -19,7 +21,7 @@ class HomeController extends Controller
 
     public function index()
     {
-        return view('index');
+        return view('index', $this->siteData());
     }
 
     public function explore(string $slug)
@@ -28,10 +30,36 @@ class HomeController extends Controller
 
         [$title, $description] = self::EXPLORE[$slug];
 
-        return view('index', [
+        return view('index', $this->siteData() + [
             'exploreSlug'     => $slug,
             'pageTitle'       => $title . ' – Retirement Plan Karo',
             'pageDescription' => $description,
         ]);
+    }
+
+    /**
+     * Admin-managed content the page shows:
+     *  - One Window Investing rows (Admin → Investment Partners, rows marked Show), links obfuscated like before
+     *  - Testimonials as last published (Admin → Testimonials → Publish)
+     */
+    private function siteData(): array
+    {
+        $ow = [];
+        $tst = null;
+        try {
+            $ow = DB::table('investment_partners')->where('is_active', true)->orderBy('sort_order')->orderBy('id')
+                ->get(['id', 'label', 'url'])
+                ->map(fn ($p) => [(string) $p->id, $p->label, base64_encode(strrev((string) $p->url))])
+                ->values()->all();
+
+            $pub = json_decode((string) Settings::get('testimonials_published_snapshot'), true);
+            if (is_array($pub) && isset($pub['testimonials'])) {
+                $tst = $pub;
+            }
+        } catch (\Throwable $e) {
+            // fall back to what the page has built in
+        }
+
+        return ['owRows' => $ow, 'tstFeed' => $tst];
     }
 }

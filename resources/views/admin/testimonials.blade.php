@@ -390,7 +390,7 @@
                     </form>
 
                     <form method="POST" action="{{ route('admin.testimonials.delete') }}" class="inline">
-                      @csrf
+                      @csrf @method('DELETE')
                       <input type="hidden" name="id" value="{{ $t->id }}">
                       <button type="submit" class="btn s d" data-confirm="{{ 'Delete this testimonial from the website?' . "\n\n" . $t->name }}">Delete</button>
                     </form>

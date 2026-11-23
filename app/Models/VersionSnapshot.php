@@ -11,6 +11,9 @@ class VersionSnapshot extends Model
 
     protected $table = 'version_snapshots';
 
+    // the table only has created_at
+    const UPDATED_AT = null;
+
     protected $fillable = [
         'version',
         'area',

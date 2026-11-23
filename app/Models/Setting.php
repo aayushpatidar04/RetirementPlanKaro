@@ -14,4 +14,12 @@ class Setting extends Model
     protected $keyType = 'string';
 
     protected $fillable = ['key', 'value'];
+
+    protected static function booted(): void
+    {
+        // App\Support\Settings caches every row; writes through this model must clear it too
+        $clear = fn () => \Illuminate\Support\Facades\Cache::forget('rpk_settings_cache');
+        static::saved($clear);
+        static::deleted($clear);
+    }
 }

@@ -1,4 +1,5 @@
 @extends('admin.layout')
+@include('admin.partials.popup-backend')
 @section('title', 'Transactions')
 
 @push('styles')
@@ -34,31 +35,17 @@
     const PAL = [["1F4E9E","E3ECFA"],["0F7A3D","E1F5E9"],["B45309","FDEFD8"],["6D28D9","EDE5FC"],["BE123C","FCE4EA"],["0E7490","DAF2F7"]];
     async function xlsx(file, sheets){ if(!window.ExcelJS){ alert('Excel library could not be loaded.'); return; } const wb=new ExcelJS.Workbook(), used={}; const thin={style:'thin',color:{argb:'FFCBD5E1'}}, bd={top:thin,left:thin,bottom:thin,right:thin}; sheets.forEach((s,n)=>{ const [c,l]=PAL[n%PAL.length]; let nm=String(s.name||'Sheet').replace(/[\\\/\?\*\[\]:]/g,'-').slice(0,28); used[nm]=(used[nm]||0)+1; if(used[nm]>1) nm+=' '+used[nm]; const ws=wb.addWorksheet(nm,{views:[{showGridLines:false,state:'frozen',ySplit:3}]}); const nc=Math.max((s.head||[]).length,2); ws.mergeCells(1,1,1,nc); const t=ws.getCell(1,1); t.value=s.title||s.name; t.font={bold:true,size:16,color:{argb:'FFFFFFFF'}}; t.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF'+c}}; t.alignment={vertical:'middle',indent:1}; ws.getRow(1).height=32; ws.mergeCells(2,1,2,nc); const sb=ws.getCell(2,1); sb.value=s.sub||('Retirement Plan Karo · '+new Date().toLocaleDateString('en-IN')); sb.font={italic:true,color:{argb:'FF64748B'}}; sb.alignment={indent:1}; const h=ws.getRow(3); h.values=s.head; h.height=24; h.eachCell((k)=>{ k.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF'+c}}; k.font={bold:true,color:{argb:'FFFFFFFF'}}; k.border=bd; k.alignment={vertical:'middle',horizontal:'center'}; }); (s.rows||[]).forEach((r,i)=>{ const row=ws.addRow(r); row.height=20; for(let ci=1;ci<=nc;ci++){ const k=row.getCell(ci); k.border=bd; k.alignment={vertical:'middle',wrapText:true}; k.fill={type:'pattern',pattern:'solid',fgColor:{argb: i%2 ? 'FFFFFFFF':'FF'+l}}; if(typeof k.value==='number' && Math.abs(k.value)>=1000) k.numFmt='#,##0.##'; } }); if(!(s.rows||[]).length) ws.addRow(['No records']); s.head.forEach((x,ci)=>{ const vals=[String(x||'').length+4,...(s.rows||[]).map(r=>String((r||[])[ci]??'').length+3)]; ws.getColumn(ci+1).width=Math.min(52,Math.max(...vals)); }); ws.autoFilter={from:{row:3,column:1},to:{row:3,column:nc}}; }); const buf=await wb.xlsx.writeBuffer(); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})); a.download=file; a.click(); }
     async function exportPayments(){
-      const rows = Array.from(document.querySelectorAll('#payments-table tbody tr')).map(tr=>{
-        const t = tr.querySelectorAll('td'); if(!t.length) return null;
-        const amt = (t[4].innerText||'').replace(/[^0-9.\-]/g,'');
-        return [t[0].innerText.trim(), t[1].innerText.trim(), t[2].innerText.trim(), t[3].innerText.trim(), amt?Number(amt):t[4].innerText.trim(), t[5].innerText.trim(), t[6].innerText.trim(), t[7].innerText.trim(), t[8].innerText.trim()];
-      }).filter(Boolean);
-      const sub = 'Retirement Plan Karo · '+new Date().toLocaleDateString('en-IN')+' · {{ $payments->total() }} records' + (@json($status) ? ' · Status: '+@json($status) : '') + (@json($from)||@json($to) ? ' · '+(@json($from)||'start')+' to '+(@json($to)||'today') : '');
-      await xlsx('Payments_'+(@json($from)||'start')+'_to_'+(@json($to)||'today')+'.xlsx', [{ name:'Transactions', title:'Transactions / Payments', sub, head:['Txn ID','Customer','Mobile','Purpose','Amount','Coupon','Status','PayU ID','When'], rows }]);
+      try {
+        const res = await fetch({!! json_encode(route('admin.payments.export', request()->only(['status','from','to']))) !!}, { credentials: 'same-origin', headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+        if (!res.ok) throw new Error('Export failed');
+        const d = await res.json();
+        await xlsx(d.filename, d.sheets);
+      } catch (e) { alert(e.message || 'Export failed'); }
     }
   </script>
   <script>
   (function(){
-    const CT = [
-      { n: "Welcome", t: "Namaste {name}\n\nRetirement Plan Karo me aapka swagat hai! Aapke account me 600 welcome points add ho gaye hain.\n\nApna free retirement plan banayein {link}\n– Team Retirement Plan Karo" },
-      { n: "Plan incomplete reminder", t: "Hi {name},\n\nAapne Retirement Plan Karo par account banaya tha, lekin abhi tak apna retirement plan complete nahi kiya.\n\nSirf 4 simple steps, 5 minute\nFree retirement corpus & SIP calculation\n600 welcome points aapke account me wait kar rahe hain\n\nAbhi plan banayein: {link}\n\nKoi sawal ho to bas reply karein.\n– Team Retirement Plan Karo" },
-      { n: "Payment failed", t: "Hi {name},\n\nAapka {purpose} payment complete nahi ho paya.\n\nKoi baat nahi Aap yahan se dobara try kar sakte hain: {link}\n\nAgar paise kat gaye hain to 2–3 din me auto-refund ho jayenge. Madad chahiye to reply karein.\n– Team Retirement Plan Karo" },
-      { n: "Report ready", t: "Hi {name}, aapki Premium Retirement Report ready hai\nDownload karein: {link}\n– Team Retirement Plan Karo" },
-      { n: "Session confirmation", t: "Hi {name}, aapka guidance session confirm ho gaya hai.\n\nHamari team aapko call / video link share karegi. Kisi badlav ke liye bas reply karein.\n– Team Retirement Plan Karo" },
-      { n: "Hot lead follow-up", t: "Hi {name}, aapne retirement guidance me interest dikhaya tha\n\nKya hum kal ek chhota call fix kar dein? Aapko kaunsa time suit karega? Reply karein.\n– Team Retirement Plan Karo" },
-      { n: "Inactive user nudge", t: "Hi {name}, kaafi din se aap Retirement Plan Karo par nahi aaye.\n\nAapka plan wahin save hai — 2 minute me update karein {link}\n– Team Retirement Plan Karo" },
-      { n: "Coupon / promotion", t: "Hi {name}\n\nSirf aapke liye special offer: coupon code *{coupon}* use karein aur Premium Report / Guidance Session par discount payein.\n\nAbhi use karein {link}\n– Team Retirement Plan Karo" },
-      { n: "Greeting / follow-up", t: "Namaste {name}\n\nRetirement Plan Karo se baat kar rahe hain. Aapke retirement plan me madad chahiye to bas reply karein.\n– Team Retirement Plan Karo" },
-      { n: "Welcome email", sub: "Welcome to Retirement Plan Karo, {name}!", t: "Hi {name},\n\nRetirement Plan Karo me aapka swagat hai!\n\nAapke account me 600 welcome points add ho gaye hain. Sirf 5 minute me aap ye sab kar sakte hain:\n  • Apna retirement corpus aur SIP calculate karein\n  • Life goals aur family ka plan banayein\n  • Free calculators (SIP, Tax, Home Loan EMI) use karein\n\nAbhi shuru karein: {link}\n\nKoi bhi sawal ho to is mail ka reply karein, hum madad karenge.\n\nWarm regards,\nTeam Retirement Plan Karo\nretirementplankaro.com", ch: "em" },
-      { n: "Payment failed", sub: "Aapka {purpose} payment complete nahi hua", t: "Hi {name},\n\nAapka {purpose} payment complete nahi ho paya. Koi baat nahi, aap dobara try kar sakte hain: {link}\n\nDhyan dein:\n • Agar paise kat gaye hain to 2–3 din me auto-refund ho jayenge.\n • Payment dobara fail ho to UPI ya card badal kar try karein.\n\nAgar koi dikkat ho to hume is mail ka reply karein.\n\nWarm regards,\nTeam Retirement Plan Karo\nretirementplankaro.com", ch: "em" },
-      { n: "Hot lead follow-up", sub: "{name} kya hum aapke retirement plan par baat karein?", t: "Hi {name},\n\nAapne retirement guidance me interest dikhaya tha, isliye hum follow-up kar rahe hain.\n\nEk chhote 20–30 minute ke call me hum:\n• Aapka retirement corpus aur gap samjhayenge\n• Aapke liye sahi SIP / investment mix batayenge\n• Aapke sawalon ke jawab denge\n\nBas bataiye aapko kaunsa din aur time suit karega.\n\nWarm regards,\nTeam Retirement Plan Karo\nretirementplankaro.com", ch: "em" }
-    ];
+    const CT = @json(\App\Support\PopupTemplates::all());
     let U = { name: 'Customer', mobile: '', email: '', link: location.origin + '/', purpose:'payment', amount:'', date:'' };
     let k = 0, raw = false, ch = 'wa';
     if (!document.getElementById('cmo')) {
@@ -84,12 +71,12 @@
     };
     $('fc').onclick = function(){ ov.classList.remove('o'); };
     $('ctsel').onchange = function(){ k=+this.value; raw=false; draw(); };
-    $('ce').onclick = function(){ if(raw){ CT[k].t=$('ctext').value; raw=false; alert('Template saved'); draw(); return; } raw=true; draw(); };
-    $('cn').onclick = function(){ const n=prompt('Template Name'); if(!n) return; CT.push({n, t:'Hi {name}, '}); k=CT.length-1; raw=true; draw(); };
+    $('ce').onclick = function(){ if(raw){ CT[k].t = $('ctext').value; raw = false; rpkTplSave(CT[k]); draw(); return; } raw=true; draw(); };
+    $('cn').onclick = function(){ const n=prompt('Template Name'); if(!n) return; CT.push({ n, t: 'Hi {name}, ', ch: ch }); rpkTplNew(CT[CT.length - 1]); k=CT.length-1; raw=true; draw(); };
     $('ws').onclick = function(){
       if(raw){ alert('Click Save template first'); return; }
-      if(ch==='wa'){ const num=(U.mobile||'').replace(/\D/g,'').slice(-10); if(num.length<10){ alert('Enter correct mobile number'); return; } window.open('https://wa.me/91'+num+'?text='+encodeURIComponent($('ctext').value),'_blank'); }
-      else { if(!(U.email||'').trim()){ alert('No email for this customer'); return; } window.location.href='mailto:'+encodeURIComponent(U.email)+'?subject='+encodeURIComponent((CT[k]&&CT[k].sub)?fill(CT[k].sub):(CT[k]?CT[k].n:'Message'))+'&body='+encodeURIComponent($('ctext').value); }
+      if(ch==='wa'){ const num=(U.mobile||'').replace(/\D/g,'').slice(-10); if(num.length<10){ alert('Enter correct mobile number'); return; } window.open('https://wa.me/91'+num+'?text='+encodeURIComponent($('ctext').value),'_blank'); rpkLog('wa', U, $('ctext').value, CT[k]); }
+      else { if(!(U.email||'').trim()){ alert('No email for this customer'); return; } rpkLog('em', U, $('ctext').value, CT[k], (CT[k] && CT[k].sub) ? fill(CT[k].sub) : (CT[k] ? CT[k].n : 'Message')); }
       ov.classList.remove('o');
     };
   })();

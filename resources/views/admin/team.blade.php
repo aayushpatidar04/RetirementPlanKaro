@@ -4,7 +4,8 @@
 @include('admin.partials.perm-matrix')
 
 @php
-  $canAdmin = (bool) auth()->user()?->can('admin');
+  $canAdmin = \App\Support\AdminAccess::isOwner();
+  $me = \App\Support\AdminAccess::actor();
 
   $roleList = $roles->map(fn($r) => ['id' => $r->id, 'name' => $r->name, 'is_system' => (bool) $r->is_system])->values();
   $memberData = $team->mapWithKeys(fn($m) => [
@@ -16,6 +17,7 @@
       'role_id' => $m->role_id,
       'is_active' => (bool) $m->is_active,
       'extra' => (array) ($m->extra ?? []),
+      'has_password' => !empty($m->password),
     ]
   ]);
 @endphp
@@ -44,6 +46,7 @@
         <div class="w"><label>Email<input class="in" name="email" type="email" required maxlength="120" value="${esc(cur.email)}"></label></div>
         <div><label>Mobile<input class="in" name="mobile" maxlength="20" value="${esc(cur.mobile)}"></label></div>
         <div><label>Role<select class="in" name="role_id" required>${roleOptions(cur.role_id)}</select></label></div>
+        <div class="w"><label>${edit ? (cur.has_password ? 'New password (leave blank to keep the current one)' : 'Password (needed to sign in)') : 'Password (needed to sign in)'}<input class="in" name="password" type="password" minlength="8" maxlength="100" autocomplete="new-password" ${edit ? '' : 'required'}></label><small class="muted">At least 8 characters. They sign in at /admin/login with this email and password.</small></div>
         <div class="w"><label class="toggle-wrap"><input type="checkbox" name="is_active" ${cur.is_active ? 'checked' : ''}> Active</label></div>
       </div>`;
 
@@ -56,6 +59,7 @@
         fd.append('mobile', f.mobile.value.trim());
         fd.append('role_id', f.role_id.value);
         fd.append('is_active', f.is_active.checked ? '1' : '0');
+        if (f.password.value) fd.append('password', f.password.value);
         await sendForm(edit ? TEAM_UPDATE.replace('__ID__', cur.id) : TEAM_STORE, fd);
         close();
         saved(edit ? 'Team member updated' : 'Team member added');
@@ -69,6 +73,7 @@
       </div>`;
       openModal('Extra access — ' + m.name, body, async (form, close) => {
         const fd = new FormData();
+        fd.append('id', m.id);
         fd.append('extra', JSON.stringify(readPermMatrix(form)));   // same JSON string the controller got from the old textarea
         await sendForm(TEAM_PERMS.replace('__ID__', m.id), fd);
         close();
@@ -128,7 +133,7 @@
               @foreach($team as $m)
                 @php
                   $extraKeys = array_keys((array) ($m->extra ?? []));
-                  $isMe = $m->email === auth()->user()?->email;
+                  $isMe = ($me['email'] ?? null) === $m->email;
                   $lockRole = $m->role?->is_system && !$canAdmin;     // non-admins can't change a system-role member
                   $isOwner = $m->role_id === 'owner';
                 @endphp
@@ -137,6 +142,7 @@
                     <b>{{ $m->name }}</b>
                     @if($isMe)<span class="pill pri">You</span>@endif
                     <br><small class="muted">{{ $m->email }}{{ $m->mobile ? ' · ' . $m->mobile : '' }}</small>
+                    <br>@if($m->password)<small class="muted">Can sign in{{ $m->last_login_at ? ' · last signed in ' . $m->last_login_at->format('d M Y, h:i A') : ' · never signed in' }}</small>@else<small style="color:var(--warn)">No password yet · cannot sign in</small>@endif
                     @if($m->added_at)
                       <br><small class="muted">Added
                         {{ \Illuminate\Support\Carbon::parse($m->added_at)->format('d M Y') }}</small>
@@ -180,7 +186,7 @@
                       <button type="button" class="btn p s" data-member-extra="{{ $m->id }}">Extra access</button>
                       <button type="button" class="btn s" data-member-edit="{{ $m->id }}" @disabled($lockRole)>Edit</button>
                       <form method="POST" action="{{ route('admin.team.delete') }}" class="inline">
-                        @csrf
+                        @csrf @method('DELETE')
                         <input type="hidden" name="id" value="{{ $m->id }}">
                         <button type="submit" class="btn s d"
                           data-confirm="{{ 'Remove this team member?' . "\n\n" . $m->name }}"
@@ -202,7 +208,7 @@
         <b>1.</b> Create a role under <b>Roles & Permissions</b> and tick what it can see and do.<br>
         <b>2.</b> Add a team member and give them that role. Use <b>Extra access</b> to give one person more than their
         role allows.<br>
-        <b>3.</b> To check what a person will see, choose their name under <b>Signed in as</b> in the left menu.<br>
+        <b>3.</b> Set a password for the member. They sign in at <b>/admin/login</b> with their email and that password, and only see what their role allows.<br>
         <span class="muted">Pages a person cannot open are hidden. Buttons they cannot use are greyed out. At least one
           active Owner is always kept.</span>
       </div>

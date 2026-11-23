@@ -338,7 +338,7 @@
                     </form>
 
                     <form method="POST" action="{{ route('admin.investment-partners.delete') }}" class="inline">
-                      @csrf
+                      @csrf @method('DELETE')
                       <input type="hidden" name="id" value="{{ $p->id }}">
                       <button type="submit" class="btn s d" data-confirm="Delete this option from website table?">Delete</button>
                     </form>

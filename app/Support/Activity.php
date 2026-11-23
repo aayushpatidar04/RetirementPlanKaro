@@ -23,12 +23,13 @@ class Activity
         try {
             if (!Schema::hasTable('activity_logs')) return;
             $admin = null;
-            try { $admin = Auth::guard('admin')->user(); } catch (\Throwable $e) {}
+            try { $admin = AdminAccess::actor(); } catch (\Throwable $e) {}
             DB::table('activity_logs')->insert([
                 'user_id' => $userId,
-                'actor_type' => $actorType ?? ($admin ? 'admin' : 'system'),
-                'actor_id' => $actorId ?? ($admin->id ?? null),
-                'actor_name' => $actorName ?? ($admin->name ?? ($admin->email ?? null)),
+                'actor_type' => $actorType ?? ($admin ? $admin['type'] : 'system'),
+                // team member ids are text ("m2"); the column is numeric, so only admins store an id
+                'actor_id' => $actorId ?? (($admin['type'] ?? null) === 'admin' ? $admin['id'] : null),
+                'actor_name' => $actorName ?? ($admin['name'] ?? null),
                 'event' => $event,
                 'description' => $description,
                 'subject_type' => $subjectType,

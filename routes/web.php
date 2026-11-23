@@ -53,6 +53,7 @@ Route::post('/payu/callback', [PayController::class, 'callback']); // existing â
 Route::post('/payu/webhook',  [PayController::class, 'webhook']);  // new â€” server-to-server confirmation
 Route::post('/api/lead', [LeadController::class, 'store'])->middleware('throttle:60,1');
 Route::post('/api/chat', [ChatController::class, 'reply'])->middleware('throttle:30,1');
+Route::post('/api/tool-usage', [App\Http\Controllers\ToolUsageController::class, 'store'])->middleware('throttle:60,1');
 
 Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
     ->middleware('signed')->name('verification.verify');
@@ -116,7 +117,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware('admin.auth')->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('clients', [App\Http\Controllers\Admin\ClientController::class, 'index'])->name('clients');
+        Route::get('section/{key}', [App\Http\Controllers\Admin\SectionController::class, 'show'])->name('section');
         Route::get('users', [AdminUserController::class, 'index'])->name('users');
+        Route::get('users/export', [AdminUserController::class, 'export'])->name('users.export');
         Route::get('users/{id}', [AdminUserController::class, 'show'])->name('users.show');
         Route::put('users/{id}', [AdminUserController::class, 'update'])->name('users.update');
         Route::post('users/{id}/adjust-points', [AdminUserController::class, 'adjustPoints'])->name('users.adjustPoints');
@@ -132,6 +135,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::get('leads', [AdminLeadController::class, 'index'])->name('leads');
         Route::get('payments', [AdminPaymentController::class, 'index'])->name('payments');
+        Route::get('payments/export', [AdminPaymentController::class, 'export'])->name('payments.export');
         Route::get('sessions', [AdminSessionController::class, 'index'])->name('sessions');
         Route::post('sessions/availability', [AdminSessionController::class, 'saveAvailability'])->name('sessions.availability');
         Route::post('sessions/{id}', [AdminSessionController::class, 'update'])->name('sessions.update');
